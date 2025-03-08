@@ -61,6 +61,8 @@ services:
         ports:
             - "51820:51820/udp"
             - "51820:51820/tcp"
+            - "58191:58191/udp"
+            - "58191:58191/tcp"
         cap_add:
             - NET_ADMIN
             - SYS_MODULE

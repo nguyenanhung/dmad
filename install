@@ -141,4 +141,15 @@ if [ ! -f "${BASE_DIR}/Caddyfile" ]; then
   exit 1
 fi
 
-docker-compose up -d
+if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
+  docker-compose up -d
+else
+  if [ -f "${BASE_DIR}/.env" ]; then
+    rm -f "${BASE_DIR}/.env"
+  fi
+  if [ -f "${BASE_DIR}/Caddyfile" ]; then
+    rm -f "${BASE_DIR}/Caddyfile"
+  fi
+  echo "Process cancelled! "
+  exit
+fi

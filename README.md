@@ -64,39 +64,39 @@ If you are using Raspberry Pi, please uncomment `#image: "mvance/unbound-rpi:lat
 
 # Prereqs and docker
 sudo apt-get update &&
-    sudo apt-get install -yqq \
-        curl \
-        git \
-        apt-transport-https \
-        ca-certificates \
-        gnupg-agent \
-        software-properties-common
+  sudo apt-get install -yqq \
+    curl \
+    git \
+    apt-transport-https \
+    ca-certificates \
+    gnupg-agent \
+    software-properties-common
 
 # Install Docker repository and keys
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
 sudo add-apt-repository \
-    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+  "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
         $(lsb_release -cs) \
         stable" &&
-    sudo apt-get update &&
-    sudo apt-get install docker-ce docker-ce-cli containerd.io -yqq
+  sudo apt-get update &&
+  sudo apt-get install docker-ce docker-ce-cli containerd.io -yqq
 
 # docker-compose
 sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
-    sudo chmod +x /usr/local/bin/docker-compose &&
-    sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose &&
+  sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
 # dmad
 git clone https://github.com/nguyenanhung/dmad.git &&
-    cd dmad &&
-    docker-compose up
+  cd dmad &&
+  ./install
 
 ```
 
 Change `WG_HOST=my.ddns.net` to your server's public address, e.g. `WG_HOST=vpn.mydomain.com`.
 > By default, any WireGuard client will have access to the Web UI, unless you set a password.
-> The Web UI will be available on http://0.0.0.0:51821. You can create new clients there.
+> The Web UI will be available on http://0.0.0.0:58191. You can create new clients there.
 
 ---
 

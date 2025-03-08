@@ -123,13 +123,11 @@ EOL
 # wg-easy
 wireguard.${WG_HOST} {
     reverse_proxy 10.2.0.3:51821
-    tls
 }
 
 # pihole
 pihole.${WG_HOST} {
     reverse_proxy 10.2.0.100:80
-    tls
 }
 EOL
 

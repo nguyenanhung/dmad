@@ -103,6 +103,7 @@ EOL
         echo "--------------------------------"
         echo "Username: ${username}"
         echo "Password: ${password}"
+        echo "Hash: ${hash_password}"
         echo "--------------------------------"
         echo
       else

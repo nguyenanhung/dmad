@@ -55,6 +55,26 @@ ask_confirm() {
 generate_password() {
   head -c 24 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 36
 }
+wait_for_health() {
+  local container_name="$1"
+  local service_type="$2"
+  local retry_count=0
+  local max_retries=20
+
+  while [ "$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null)" != "healthy" ]; do
+    echo "${service_type} → ${container_name} is not healthy yet. Retrying..."
+    sleep 5
+    ((retry_count++))
+
+    if [ "$retry_count" -ge "$max_retries" ]; then
+      echo "${service_type} → ${container_name} failed to become healthy after ${max_retries} attempts. Please check logs and try again"
+      echo "Check docker logs: docker -f ${container_name} failed to become healthy"
+      return 1
+    fi
+  done
+
+  echoO "${service_type} → ${container_name} is healthy"
+}
 update_credentials() {
   local WG_HOST WG_PORT WG_PASSWORD PIHOLE_TZ PIHOLE_WEBPASSWORD
   WG_HOST=$(ask_info "Enter WG_HOST" "dmad.nguyenanhung.com")
@@ -103,17 +123,13 @@ EOL
 # wg-easy
 wireguard.${WG_HOST} {
     reverse_proxy 10.2.0.3:51821
-    tls {
-        on_demand
-    }
+    tls
 }
 
 # pihole
 pihole.${WG_HOST} {
     reverse_proxy 10.2.0.100:80
-    tls {
-        on_demand
-    }
+    tls
 }
 EOL
 
@@ -153,6 +169,21 @@ if ask_confirm "Do you confirm that you have pointed DNS to the above domains an
     exit 1
   }
   docker compose up -d
+  wait_for_health "caddy" "Caddy Web Server"
+
+  if docker ps --format '{{.Names}} {{.Status}}' | grep -E '^caddy .*Up'; then
+    if ask_confirm "Do you want to enable Basic Auth for Wireguard and Pihole?"; then
+      auth_username=$(ask_info "Enter a username for basic authentication" "admin")
+      auth_password=$(ask_info "Enter a password for basic authentication" "$(generate_password)")
+      hashed_password=$(docker exec -it caddy caddy hash-password --plaintext "${auth_password}" | tr -d '\r')
+      echo "🔐 Hashed Password: $hashed_password"
+      sed -i "/}/i \    basic_auth {\n        ${auth_username} ${auth_password}\n    }" "Caddyfile"
+    else
+      echo "❌ Basic Auth not enabled."
+    fi
+  else
+    echo "❌ Caddy container is NOT running!"
+  fi
 else
   if [ -f "${BASE_DIR}/.env" ]; then
     rm -f "${BASE_DIR}/.env"

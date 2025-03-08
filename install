@@ -34,12 +34,6 @@ if ! has_command "docker-compose"; then
     sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 fi
 
-# wire hole
-git clone https://github.com/nguyenanhung/dmad.git
-cd dmad || {
-  echo "Failed to change to dmad. Please try again"
-  exit 1
-}
 ask_info() {
   local prompt_message=$1 # Prompt message
   local default_value=$2  # Default value for the default option

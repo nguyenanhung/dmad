@@ -1,0 +1,15 @@
+# wg-easy
+wireguard.<WG_HOST> {
+    reverse_proxy 10.2.0.3:<WG_PORT>
+    tls {
+        on_demand
+    }
+}
+
+# pihole
+pihole.<WG_HOST> {
+    reverse_proxy 10.2.0.100:80
+    tls {
+        on_demand
+    }
+}

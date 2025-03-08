@@ -98,6 +98,7 @@ pihole.${WG_HOST} {
     reverse_proxy 10.2.0.100:80
 }
 EOL
+        docker restart caddy
         echo "✅ Enable Basic Authentication success"
         echo
         echo "--------------------------------"

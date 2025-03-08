@@ -31,6 +31,11 @@ WireHole
 * Twitter: [@DevinStokes](https://twitter.com/DevinStokes)
 * Github: [@IAmStoxe](https://github.com/IAmStoxe)
 
+👤 **nguyenanhung**
+
+* Twitter: [@nguyenanhung](https://twitter.com/nguyenanhung)
+* Github: [@nguyenanhung](https://github.com/nguyenanhung)
+
 ## 🤝 Contributing
 
 Contributions, issues and feature requests are welcome!<br />Feel free to
@@ -40,7 +45,7 @@ check [issues page](https://github.com/IAmStoxe/wirehole/issue).
 
 Give a ⭐ if this project helped you!
 
-<a href="https://www.buymeacoffee.com/stoxe" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-orange.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+<a href="https://www.paypal.com/paypalme/nguyenanhung" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-orange.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ---
 

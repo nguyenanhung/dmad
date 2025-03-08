@@ -115,6 +115,8 @@ Temporary Items
 caddy_data/
 caddy_config/
 Caddyfile
+wg0.conf
+wg0.json
 
 # File cấu hình tạm thời hoặc tự sinh
 Caddyfile.bak

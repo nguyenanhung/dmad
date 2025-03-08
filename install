@@ -102,7 +102,7 @@ EOL
   cat >Caddyfile <<EOL
 # wg-easy
 wireguard.${WG_HOST} {
-    reverse_proxy 10.2.0.3:${WG_PORT}
+    reverse_proxy 10.2.0.3:51820
     tls {
         on_demand
     }

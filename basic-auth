@@ -51,7 +51,7 @@ wait_for_health() {
     fi
   done
 
-  echoO "${service_type} → ${container_name} is healthy"
+  echo "${service_type} → ${container_name} is healthy"
 }
 update_basic_auth() {
   if ask_confirm "Enable/Update Basic Authentication for Wireguard and Pihole?"; then
@@ -107,12 +107,17 @@ EOL
         echo "Hash: ${hash_password}"
         echo "--------------------------------"
         echo
+        exit
       else
         echo "❌ Basic Auth not enabled."
+        exit
       fi
     else
       echo "❌ Caddy container is NOT running!"
+      exit
     fi
+  else
+    exit 1
   fi
 }
 update_basic_auth

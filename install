@@ -118,8 +118,14 @@ pihole.${WG_HOST} {
 EOL
 
   echo "Credentials updated successfully!"
+  echo
+  echo "----------------------------------------------------------------"
   echo "Generated .env and Caddyfile with the following values:"
+  echo
+  echo "----------------------------------------------------------------"
+  echo
   echo "WG_HOST: ${WG_HOST}"
+  echo "WG_PORT: ${WG_PORT}"
   echo "WG_PASSWORD: ${WG_PASSWORD}"
   echo "PIHOLE_TZ: ${PIHOLE_TZ}"
   echo "PIHOLE_WEBPASSWORD: ${PIHOLE_WEBPASSWORD}"
@@ -142,7 +148,11 @@ if [ ! -f "${BASE_DIR}/Caddyfile" ]; then
 fi
 
 if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
-  docker-compose up -d
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  docker compose up -d
 else
   if [ -f "${BASE_DIR}/.env" ]; then
     rm -f "${BASE_DIR}/.env"

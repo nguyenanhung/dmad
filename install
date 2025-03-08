@@ -9,24 +9,30 @@ fi
 
 # Export BASE_DIR to be available in sourced files
 export BASE_DIR
-
+has_command() {
+  command -v "$1" >/dev/null 2>&1
+}
 # Init setup
 sudo apt update && sudo apt install -yqq curl git apt-transport-https ca-certificates gnupg-agent software-properties-common
 
 # Install Docker repository and keys
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+if ! has_command docker; then
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
-sudo add-apt-repository \
-  "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+  sudo add-apt-repository \
+    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
         $(lsb_release -cs) \
         stable" &&
-  sudo apt update &&
-  sudo apt install docker-ce docker-ce-cli containerd.io -yqq
+    sudo apt update &&
+    sudo apt install docker-ce docker-ce-cli containerd.io -yqq
+fi
 
 # docker-compose
-sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
-  sudo chmod +x /usr/local/bin/docker-compose &&
-  sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+if ! has_command "docker-compose"; then
+  sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
+    sudo chmod +x /usr/local/bin/docker-compose &&
+    sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+fi
 
 # wire hole
 git clone https://github.com/nguyenanhung/dmad.git

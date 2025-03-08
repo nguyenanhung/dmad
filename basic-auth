@@ -54,7 +54,7 @@ wait_for_health() {
   echoO "${service_type} → ${container_name} is healthy"
 }
 update_basic_auth() {
-  if ask_confirm "Enable Basic Authentication for Wireguard and Pihole?"; then
+  if ask_confirm "Enable/Update Basic Authentication for Wireguard and Pihole?"; then
     local username password hash_password
     username=$(ask_info "Enter a username for basic authentication" "admin")
     password=$(ask_info "Enter a password for basic authentication" "$(generate_password)")

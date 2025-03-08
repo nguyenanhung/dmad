@@ -39,7 +39,7 @@ WireHole
 ## 🤝 Contributing
 
 Contributions, issues and feature requests are welcome!<br />Feel free to
-check [issues page](https://github.com/IAmStoxe/wirehole/issue).
+check [issues page](https://github.com/nguyenanhung/dmad/issue).
 
 ## Show your support
 

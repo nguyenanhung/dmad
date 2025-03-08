@@ -18,8 +18,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.2"
-                    memory: 256M
+                    cpus: "1"
+                    memory: 512M
         healthcheck:
             test: [ "CMD", "dig", "@127.0.0.1", "google.com" ]
             interval: 30s

@@ -101,7 +101,7 @@ git clone https://github.com/nguyenanhung/dmad.git &&
 
 Change `WG_HOST=my.ddns.net` to your server's public address, e.g. `WG_HOST=vpn.mydomain.com`.
 > By default, any WireGuard client will have access to the Web UI, unless you set a password.
-> The Web UI will be available on http://0.0.0.0:58191. You can create new clients there.
+> The Web UI will be available on http://0.0.0.0:51821. You can create new clients there.
 
 ---
 

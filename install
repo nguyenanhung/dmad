@@ -58,7 +58,7 @@ generate_password() {
 update_credentials() {
   local WG_HOST WG_PORT WG_PASSWORD PIHOLE_TZ PIHOLE_WEBPASSWORD
   WG_HOST=$(ask_info "Enter WG_HOST" "dmad.nguyenanhung.com")
-  WG_PORT=$(ask_info "Enter WG_PORT" "58191")
+  WG_PORT=$(ask_info "Enter WG_PORT" "51821")
   WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
   PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "Asia/Hong_Kong")
   PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
@@ -102,7 +102,7 @@ EOL
   cat >Caddyfile <<EOL
 # wg-easy
 wireguard.${WG_HOST} {
-    reverse_proxy 10.2.0.3:51820
+    reverse_proxy 10.2.0.3:51821
     tls {
         on_demand
     }

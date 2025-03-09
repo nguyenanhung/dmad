@@ -115,6 +115,7 @@ Temporary Items
 caddy_data/
 caddy_config/
 Caddyfile
+sites/
 wg0.conf
 wg0.json
 

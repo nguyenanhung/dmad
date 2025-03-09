@@ -1,15 +1,30 @@
-# wg-easy
-wireguard.<WG_HOST> {
-    reverse_proxy 10.2.0.3:51820
-    tls {
-        on_demand
+{
+    # Global options
+    admin off
+    persist_config off
+}
+# Configure caching for static files
+(file_static_caching) {
+    @static {
+        path *.ico *.css *.js *.gif *.jpg *.jpeg *.png *.svg *.woff *.json
     }
+    header @static Cache-Control max-age=2592000
+}
+# Security restrictions for sensitive files
+(file_forbidden_restricted) {
+    @forbidden {
+        not path /wp-includes/ms-files.php
+        path /wp-admin/includes/*.php
+        path /wp-includes/*.php
+        path /wp-config.php
+        path /wp-content/uploads/*.php
+        path /wp-content/debug.log
+        path /.user.ini
+        path /.env
+        path /storage/logs/laravel.log
+    }
+    respond @forbidden "Access denied" 403
 }
 
-# pihole
-pihole.<WG_HOST> {
-    reverse_proxy 10.2.0.100:80
-    tls {
-        on_demand
-    }
-}
+# Site configurations will be imported below
+import sites/*.caddy

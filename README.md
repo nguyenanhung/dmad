@@ -1,6 +1,7 @@
 ## What is this?
 
-D.M ADS (Đ*t m3 advertising) is a fork of WireHole, which is a combination of WireGuard, PiHole, and Unbound in a docker-compose
+D.M ADS (Đ*t m3 advertising) is a fork of WireHole, which is a combination of WireGuard, PiHole, and Unbound in a
+docker-compose
 project with the intent of enabling users to quickly and easily create and deploy a personally managed full or
 split-tunnel WireGuard VPN with ad blocking capabilities (via Pihole), and DNS caching with additional privacy options (
 via Unbound).
@@ -66,38 +67,41 @@ If you are using Raspberry Pi, please uncomment `#image: "mvance/unbound-rpi:lat
 
 ```bash
 #!/bin/bash
-
-# Prereqs and docker
-sudo apt update &&
-  sudo apt install -yqq \
-    curl \
-    git \
-    apt-transport-https \
-    ca-certificates \
-    gnupg-agent \
-    software-properties-common
-
-# Install Docker repository and keys
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-sudo add-apt-repository \
-  "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) \
-        stable" &&
-  sudo apt update &&
-  sudo apt install docker-ce docker-ce-cli containerd.io -yqq
-
-# docker-compose
-sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
-  sudo chmod +x /usr/local/bin/docker-compose &&
-  sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
-
-# dmad
-git clone https://github.com/nguyenanhung/dmad.git &&
-  cd dmad &&
-  ./install
+git clone https://github.com/nguyenanhung/dmad.git && cd dmad && ./dmad --install
 
 ```
+
+The best way is to clone the source code, then run the command `./dmad --install`, the system will ask for basic
+information to proceed with the installation without having to edit the configuration.
+
+However, if you want to do it manually, follow the steps below
+
+- copy the file `.env.example` to `.env`
+
+Next
+
+- Update the configuration information in the `.env` file. Some information you need to update
+
+- `DMAD_DOMAIN=dmad.domain`
+- `ON_LOCAL=YES`: YES if installing in a local network, NO if it is a server environment
+
+- `WIREGUARD_URL=https://wire.guard`
+- `WG_HOST=dmad.host`
+- `PASSWORD=secure_password`
+
+- `PIHOLE_URL=https://pi.hole`
+- `PIHOLE_WEBPASSWORD=secure_password_here`
+
+If installing in a local environment, you do not need to do anything more, run the command: `docker compose up -d`
+
+If installing on a server environment, you may want to configure HTTPS
+
+- copy the file `Caddyfile.example` to `Caddyfile`
+- copy the file `dmad.caddy.example` to `sites/dmad.caddy`
+- Update the configuration information in the file `sites/dmad.caddy`. Some information you need to update
+- `wire.guard`: This is the value of the variable `WIREGUARD_URL` (excluding http/https://)
+- `pi.hole`: This is the value of the variable `PIHOLE_URL` (excluding http/https://)
+- Then run the command: `docker compose up -d`
 
 Change `WG_HOST=my.ddns.net` to your server's public address, e.g. `WG_HOST=vpn.mydomain.com`.
 > By default, any WireGuard client will have access to the Web UI, unless you set a password.

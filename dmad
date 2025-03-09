@@ -1,0 +1,333 @@
+#!/bin/bash
+# Set BASE_DIR reliably based on main.sh location
+if command -v realpath >/dev/null 2>&1; then
+  BASE_DIR="$(dirname "$(realpath "$0")")"
+else
+  # Fallback for systems without realpath
+  BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
+
+# Export BASE_DIR to be available in sourced files
+export BASE_DIR
+
+has_command() {
+  command -v "$1" >/dev/null 2>&1
+}
+ask_info() {
+  local prompt_message=$1 # Prompt message
+  local default_value=$2  # Default value for the default option
+  local user_input        # User input
+  if [ -z "$default_value" ]; then
+    read -rp "${prompt_message}: " user_input
+  else
+    read -rp "${prompt_message} [Default is: ${default_value}]: " user_input
+  fi
+  echo "${user_input:-$default_value}"
+}
+ask_confirm() {
+  local ask_confirm_msg confirmation
+  ask_confirm_msg=$1
+  echo -ne "${ask_confirm_msg} (Y/N, empty as No, press [Ctrl+C (macOS: Control+C)] to quit proceed): "
+  read -r confirmation
+  [[ $confirmation =~ ^(Y|y|YES|yes|Yes|OK|ok)$ ]]
+}
+generate_password() {
+  head -c 24 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 36
+}
+wait_for_health() {
+  local container_name="$1"
+  local service_type="$2"
+  local retry_count=0
+  local max_retries=20
+
+  while [ "$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null)" != "healthy" ]; do
+    echo "${service_type} → ${container_name} is not healthy yet. Retrying..."
+    sleep 5
+    ((retry_count++))
+
+    if [ "$retry_count" -ge "$max_retries" ]; then
+      echo "${service_type} → ${container_name} failed to become healthy after ${max_retries} attempts. Please check logs and try again"
+      echo "Check docker logs: docker -f ${container_name} failed to become healthy"
+      return 1
+    fi
+  done
+
+  echo "${service_type} → ${container_name} is healthy"
+}
+write_base_caddyfile() {
+  cat <<EOL
+{
+    # Global options
+    admin off
+    persist_config off
+}
+# Configure caching for static files
+(file_static_caching) {
+    @static {
+        path *.ico *.css *.js *.gif *.jpg *.jpeg *.png *.svg *.woff *.json
+    }
+    header @static Cache-Control max-age=2592000
+}
+# Security restrictions for sensitive files
+(file_forbidden_restricted) {
+    @forbidden {
+        not path /wp-includes/ms-files.php
+        path /wp-admin/includes/*.php
+        path /wp-includes/*.php
+        path /wp-config.php
+        path /wp-content/uploads/*.php
+        path /wp-content/debug.log
+        path /.user.ini
+        path /.env
+        path /storage/logs/laravel.log
+    }
+    respond @forbidden "Access denied" 403
+}
+
+# Site configurations will be imported below
+import sites/*.caddy
+EOL
+}
+write_caddy_https_config() {
+  local DOMAIN="$1"
+  local SITE_DIR="${BASE_DIR}/sites"
+  mkdir -p "${SITE_DIR}" # Create the 'sites' directory if it doesn't exist
+  cat >"${SITE_DIR}"/dmad.caddy <<EOL
+# Configuration for wg-easy reverse proxy
+wireguard.${DOMAIN} {
+    reverse_proxy 10.2.0.3:51821
+}
+
+# Configuration for pihole reverse proxy
+pihole.${DOMAIN} {
+    reverse_proxy 10.2.0.100:80
+}
+EOL
+}
+caddy_validate() {
+  docker exec caddy caddy validate --config "/etc/caddy/Caddyfile"
+}
+caddy_reload() {
+  echo "Reloading Caddy..."
+  if docker restart caddy; then
+    echo "✅ Caddy reloaded successfully"
+  else
+    echo "❌ Failed to reload Caddy. Please check logs Caddy container"
+    docker logs caddy --tail 50
+    return 1
+  fi
+}
+restart_caddy() {
+  if caddy_validate; then
+    caddy_reload
+  else
+    echo "Caddy configuration is not valid"
+    return 1
+  fi
+}
+install_packages() {
+  # Init setup
+  sudo apt update && sudo apt install -yqq curl git apt-transport-https ca-certificates gnupg-agent software-properties-common
+
+  # Install Docker repository and keys
+  if ! has_command docker; then
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+    sudo add-apt-repository \
+      "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) \
+        stable" &&
+      sudo apt update &&
+      sudo apt install docker-ce docker-ce-cli containerd.io -yqq
+  fi
+
+  # docker-compose
+  if ! has_command "docker-compose"; then
+    sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
+      sudo chmod +x /usr/local/bin/docker-compose &&
+      sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+  fi
+}
+install_credentials() {
+  local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PORT WG_PASSWORD PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
+  SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
+  WIREGUARD_URL="http://0.0.0.0:51821"
+  PIHOLE_URL="http://10.2.0.100/admin"
+  DMAD_DOMAIN=$(ask_info "Enter DMAD_DOMAIN" "dmad.nguyenanhung.com")
+
+  # Setting the wireguard host endpoint
+  WG_HOST=$(ask_info "Enter WG_HOST" "$SERVER_IP")
+
+  if ! ask_confirm "Are you installing on Server/VPS environment?"; then
+    ON_LOCAL="YES"
+    if ask_confirm "If you have a domain name and plan to use DNS domain name instead of real IP. Make sure you point the domains ${DMAD_DOMAIN}, wireguard.${DMAD_DOMAIN}, pihole.${DMAD_DOMAIN} to ${SERVER_IP}."; then
+      WG_HOST="${DMAD_DOMAIN}"
+      WIREGUARD_URL="https://wireguard.${DMAD_DOMAIN}"
+      PIHOLE_URL="https://pihole.${DMAD_DOMAIN}"
+    fi
+  else
+    ON_LOCAL="NO"
+    local DYNAMIC_DNS_SERVER
+    DYNAMIC_DNS_SERVER=$(ask_info "If you are installing this script on a local computer or raspberry pi, home-lab then you may need to use a dynamic DNS provider solution. Enter your dynamic DNS provider address." "my.ddns.net")
+    WG_HOST="${DYNAMIC_DNS_SERVER}"
+  fi
+
+  WG_PORT=$(ask_info "Enter WG_PORT" "51820")
+  PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "Asia/Hong_Kong")
+  WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
+  PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
+
+  # Default environment
+  local WG_DEFAULT_ADDRESS="10.6.0.x"
+  local WG_DEFAULT_DNS="10.2.0.100,1.1.1.1"
+  local WG_PERSISTENT_KEEPALIVE=25
+  local PIHOLE_SERVERIP="10.2.0.100"
+  local PIHOLE_DNS1="10.2.0.200"
+  local PIHOLE_DNS2="1.1.1.1"
+
+  # Create .env credentials
+  cat >.env <<EOL
+# dmad
+DMAD_DOMAIN=${DMAD_DOMAIN}
+ON_LOCAL=${ON_LOCAL}
+
+# wg-easy
+WIREGUARD_URL=${WIREGUARD_URL}
+WG_HOST=${WG_HOST}
+PASSWORD=${WG_PASSWORD}
+WG_PORT=${WG_PORT}
+WG_DEFAULT_ADDRESS=${WG_DEFAULT_ADDRESS}
+WG_DEFAULT_DNS=${WG_DEFAULT_DNS}
+WG_PERSISTENT_KEEPALIVE=${WG_PERSISTENT_KEEPALIVE}
+# Optional:
+# - WG_ALLOWED_IPS=192.168.15.0/24, 10.0.1.0/24
+# - WG_INTERFACE=wg0
+# - WG_MTU=1420
+# - WG_ALLOWED_IPS=192.168.15.0/24, 10.0.1.0/24
+# - WG_PRE_UP=echo "Pre Up" > /etc/wireguard/pre-up.txt
+# - WG_POST_UP=echo "Post Up" > /etc/wireguard/post-up.txt
+# - WG_PRE_DOWN=echo "Pre Down" > /etc/wireguard/pre-down.txt
+# - WG_POST_DOWN=echo "Post Down" > /etc/wireguard/post-down.txt
+
+# pihole
+PIHOLE_URL=${PIHOLE_URL}
+PIHOLE_TZ=${PIHOLE_TZ}
+PIHOLE_WEBPASSWORD=${PIHOLE_WEBPASSWORD}
+PIHOLE_SERVERIP=${PIHOLE_SERVERIP}
+PIHOLE_DNS1=${PIHOLE_DNS1}
+PIHOLE_DNS2=${PIHOLE_DNS2}
+EOL
+
+  # Setting Caddyfile
+  true >Caddyfile # Clear existing content
+  write_base_caddyfile >>Caddyfile
+  if ask_confirm "Do you want to enable Caddy HTTPS for wireguard and pihole? (NOTE: If you install this script on a local computer or raspberry pi, home-lab, you can skip this option to use the local IP.)"; then
+    write_caddy_https_config "${DMAD_DOMAIN}"
+  fi
+
+  echo "Credentials updated successfully!"
+  echo
+  echo "----------------------------------------------------------------"
+  echo "Generated .env and Caddyfile with the following values:"
+  echo
+  echo "----------------------------------------------------------------"
+  echo
+  echo "DMAD_DOMAIN: ${DMAD_DOMAIN}"
+  echo "WG_HOST: ${WG_HOST}"
+  echo
+  echo "WIREGUARD_URL: ${WIREGUARD_URL}"
+  echo "WG_PORT: ${WG_PORT}"
+  echo "WG_PASSWORD: ${WG_PASSWORD}"
+  echo
+  echo "PIHOLE_URL: ${PIHOLE_URL}"
+  echo "PIHOLE_TZ: ${PIHOLE_TZ}"
+  echo "PIHOLE_WEBPASSWORD: ${PIHOLE_WEBPASSWORD}"
+  echo
+  echo "----------------------------------------------------------------"
+  echo "Need to point DNS of domain names: ${WG_HOST}, wireguard.${WG_HOST}, pihole.${WG_HOST} to server IP $(curl -sSL https://checkip.amazonaws.com) first to complete configuration"
+  echo "----------------------------------------------------------------"
+  echo
+}
+update_basic_auth() {
+  if ask_confirm "Enable/Update Basic Authentication for Wireguard and Pihole?"; then
+    local username password hashed_password
+    username=$(ask_info "Enter a username for basic authentication" "admin")
+    password=$(ask_info "Enter a password for basic authentication" "$(generate_password)")
+    hashed_password=$(docker exec -it caddy caddy hash-password --plaintext "${password}" | tr -d '\r')
+    echo "🔐 Hashed Password: ${hashed_password}"
+
+    wait_for_health "caddy" "Caddy Web Server"
+
+    if docker ps --format '{{.Names}} {{.Status}}' | grep -E '^caddy .*Up'; then
+      if ask_confirm "Do you want to enable Basic Auth for Wireguard and Pihole?"; then
+        source .env
+        write_caddy_https_config "${DMAD_DOMAIN}"
+        restart_caddy
+        echo "✅ Enable Basic Authentication success"
+        echo
+        echo "--------------------------------"
+        echo "Username: ${username}"
+        echo "Password: ${password}"
+        echo "Hashed password: ${hashed_password}"
+        echo "--------------------------------"
+        echo
+        exit
+      else
+        echo "❌ Basic Auth not enabled."
+        exit
+      fi
+    else
+      echo "❌ Caddy container is NOT running!"
+      exit
+    fi
+  else
+    exit 1
+  fi
+}
+
+case "$2" in
+--install | -install | install | i)
+  install_packages
+  install_credentials
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  if [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+    echo "Failed to update Caddyfile"
+    exit 1
+  fi
+  if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
+    cd "$BASE_DIR" || {
+      echo "Failed to change directory"
+      exit 1
+    }
+    docker compose up -d
+    update_basic_auth # Update basic authentication
+  else
+    if [ -f "${BASE_DIR}/.env" ]; then
+      rm -f "${BASE_DIR}/.env"
+    fi
+    if [ -f "${BASE_DIR}/Caddyfile" ]; then
+      rm -f "${BASE_DIR}/Caddyfile"
+    fi
+    echo "Process cancelled! "
+    exit
+  fi
+  ;;
+--basic-auth | -basic-auth | basic-auth | --auth | -auth | auth)
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo ".env credentials is not available. Please sure you install dmad first"
+    exit 1
+  fi
+  if [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+    echo "Caddyfile credentials is not available. Please sure you install dmad first"
+    exit 1
+  fi
+  update_basic_auth
+  ;;
+*)
+  echo "$1 in validate"
+  exit 1
+  ;;
+esac

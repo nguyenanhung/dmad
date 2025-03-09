@@ -1,0 +1,8 @@
+wire.guard {
+    reverse_proxy 10.2.0.3:51821
+}
+
+# Configuration for pihole reverse proxy
+pi.hole {
+    reverse_proxy 10.2.0.100:80
+}

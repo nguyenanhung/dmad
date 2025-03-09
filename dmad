@@ -345,10 +345,10 @@ case "$1" in
   ;;
 --up | -up | up)
   docker compose up -d
-  wait_for_health "caddy" "Caddy Web Server"
   wait_for_health "wg-easy" "Wireguard VPN Server"
   wait_for_health "unbound" "Unbound DNS Resolver"
   wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+  wait_for_health "caddy" "Caddy Web Server"
   exit
   ;;
 --self-update | -self-update | self-update)

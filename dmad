@@ -285,7 +285,7 @@ update_basic_auth() {
   fi
 }
 
-case "$2" in
+case "$1" in
 --install | -install | install | i)
   install_packages
   install_credentials

@@ -332,6 +332,7 @@ case "$2" in
   ;;
 --log | -log | log)
   if [ -n "$2" ]; then
+    echo "Fetch docker logs from $2"
     docker logs -f "$2"
   else
     docker logs -f caddy

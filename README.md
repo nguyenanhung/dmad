@@ -10,7 +10,7 @@ D.M ADS (Đ*t m3 advertising) is added a Web UI for WireGuard Client Management.
 of [wg-easy](https://github.com/WeeJeWel/wg-easy), replacing the Linux server's WireGuard image.
 
 <p align="center">
-  <img src="./wirehole-ui.png" width="702" />
+  <img src="./wg-easy-ui.png" width="702" />
 </p>
 
 WireHole

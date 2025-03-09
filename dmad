@@ -315,7 +315,7 @@ case "$2" in
     exit
   fi
   ;;
---basic-auth | -basic-auth | basic-auth | --auth | -auth | auth)
+--basic-auth | -basic-auth | basic-auth | --auth | -auth | auth | a)
   if [ ! -f "${BASE_DIR}/.env" ]; then
     echo ".env credentials is not available. Please sure you install dmad first"
     exit 1
@@ -326,8 +326,20 @@ case "$2" in
   fi
   update_basic_auth
   ;;
---reload-caddy | -reload-caddy | reload-caddy)
+--reload-caddy | -reload-caddy | reload-caddy | --caddy-reload | -caddy-reload | caddy-reload | r)
   restart_caddy
+  exit
+  ;;
+--log | -log | log)
+  if [ -n "$2" ]; then
+    docker logs -f "$2"
+  else
+    docker logs -f caddy
+  fi
+  exit
+  ;;
+--self-update | -self-update | self-update)
+  git fetch origin main && git pull
   exit
   ;;
 *)

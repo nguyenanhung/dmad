@@ -149,7 +149,7 @@ install_packages() {
   fi
 }
 install_credentials() {
-  local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PORT WG_PASSWORD PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
+  local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
   WIREGUARD_URL="http://0.0.0.0:51821"
   PIHOLE_URL="http://10.2.0.100/admin"
@@ -172,12 +172,12 @@ install_credentials() {
     WG_HOST="${DYNAMIC_DNS_SERVER}"
   fi
 
-  WG_PORT=$(ask_info "Enter WG_PORT" "51820")
   PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "Asia/Hong_Kong")
   WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
   PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
 
   # Default environment
+  local WG_PORT="51820"
   local WG_DEFAULT_ADDRESS="10.6.0.x"
   local WG_DEFAULT_DNS="10.2.0.100,1.1.1.1"
   local WG_PERSISTENT_KEEPALIVE=25

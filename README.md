@@ -66,9 +66,7 @@ If you are using Raspberry Pi, please uncomment `#image: "mvance/unbound-rpi:lat
 ### Full Setup
 
 ```bash
-#!/bin/bash
 git clone https://github.com/nguyenanhung/dmad.git && cd dmad && ./dmad --install
-
 ```
 
 The best way is to clone the source code, then run the command `./dmad --install`, the system will ask for basic

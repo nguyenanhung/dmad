@@ -15,11 +15,11 @@ services:
         networks:
             private_network:
                 ipv4_address: 10.2.0.200
-        deploy:
-            resources:
-                limits:
-                    cpus: "1"
-                    memory: 512M
+#        deploy:
+#            resources:
+#                limits:
+#                    cpus: "1"
+#                    memory: 512M
         healthcheck:
             test: [ "CMD", "dig", "@127.0.0.1", "google.com" ]
             interval: 30s

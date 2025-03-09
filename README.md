@@ -9,6 +9,8 @@ via Unbound).
 D.M ADS (Đ*t m3 advertising) is added a Web UI for WireGuard Client Management. It uses the Docker image
 of [wg-easy](https://github.com/WeeJeWel/wg-easy), replacing the Linux server's WireGuard image.
 
+Additionally, it has a built-in `Caddy Web Server`, making access to wireguard and pi-hole portal more secure. You can also use it as a reverse proxy routing
+
 <p align="center">
   <img src="./wg-easy-ui.png" width="702" />
 </p>
@@ -125,20 +127,16 @@ While connected to WireGuard, navigate to http://10.2.0.100/admin
 
 ## Configuring for Dynamic DNS (DDNS)
 
-If you're using a dynamic DNS provider, you can edit `docker-compose.yml` under "wireguard".
+If you're using a dynamic DNS provider, you can edit `.env` under "wg-easy".
 Here is an excerpt from the file.
 
-You need to uncomment `#- WG_HOST` so it reads `- WG_HOST` without the `#` and then change `my.ddns.net` to your DDNS
-URL.
+You need to update the `WG_HOST` value to your Dynamic DNS address
 
 ```yaml
-wireguard:
-    # ...
-    environment:
-        # ...
-        - WG_HOST=my.ddns.net #optional - For use with DDNS (Uncomment to use)
-        # ...
-    # ...
+# wg-easy
+# ...
+WG_HOST=dmad.host #optional - For use with DDNS (example: my.ddns.net)
+# ...
 ```
 
 ---

@@ -339,6 +339,10 @@ case "$1" in
   fi
   exit
   ;;
+--status | -status | status)
+  docker ps
+  exit
+  ;;
 --down | -down | down)
   docker compose down
   exit

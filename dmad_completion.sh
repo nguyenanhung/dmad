@@ -14,6 +14,7 @@ _dmad_completion() {
     "log"              # Logging commands
     "down"             # Docker compose down command
     "up"               # Docker compose up command
+    "status"           # Docker status command
     "self-update"      # Self-update command
     "setup-completion" # Setup completion command
   )

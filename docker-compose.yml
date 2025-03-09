@@ -97,6 +97,10 @@ services:
             interval: 30s
             timeout: 5s
             retries: 3
+        logging:
+            options:
+                max-size: "10m"
+                max-file: "7"
         depends_on:
             - wg-easy
             - pihole

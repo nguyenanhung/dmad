@@ -326,6 +326,10 @@ case "$2" in
   fi
   update_basic_auth
   ;;
+--reload-caddy | -reload-caddy | reload-caddy)
+  restart_caddy
+  exit
+  ;;
 *)
   echo "$1 in validate"
   exit 1

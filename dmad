@@ -339,6 +339,14 @@ case "$1" in
   fi
   exit
   ;;
+--down | -down | down)
+  docker compose down
+  exit
+  ;;
+--up | -up | up)
+  docker compose up -d
+  exit
+  ;;
 --self-update | -self-update | self-update)
   git fetch origin main && git pull
   exit

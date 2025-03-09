@@ -104,6 +104,44 @@ pihole.${DOMAIN} {
 }
 EOL
 }
+write_caddy_dmad_basic_auth() {
+  local DOMAIN="$1"
+  local USERNAME="$2"
+  local HASHED_PASSWORD="$3"
+  local SITE_DIR="${BASE_DIR}/sites"
+  mkdir -p "${SITE_DIR}" # Create the 'sites' directory if it doesn't exist
+  cat >"${SITE_DIR}"/dmad.caddy <<EOL
+# Configuration for wg-easy reverse proxy
+wireguard.${DOMAIN} {
+    @acme_challenge {
+        path /.well-known/acme-challenge/*
+    }
+    handle @acme_challenge {
+        file_server
+    }
+
+    basic_auth {
+        ${USERNAME} ${HASHED_PASSWORD}
+    }
+    reverse_proxy 10.2.0.3:51821
+}
+
+# Configuration for pihole reverse proxy
+pihole.${DOMAIN} {
+    @acme_challenge {
+        path /.well-known/acme-challenge/*
+    }
+    handle @acme_challenge {
+        file_server
+    }
+
+    basic_auth {
+        ${USERNAME} ${HASHED_PASSWORD}
+    }
+    reverse_proxy 10.2.0.100:80
+}
+EOL
+}
 caddy_validate() {
   docker exec caddy caddy validate --config "/etc/caddy/Caddyfile"
 }
@@ -261,7 +299,7 @@ update_basic_auth() {
     if docker ps --format '{{.Names}} {{.Status}}' | grep -E '^caddy .*Up'; then
       if ask_confirm "Do you want to enable Basic Auth for Wireguard and Pihole?"; then
         source .env
-        write_caddy_https_config "${DMAD_DOMAIN}"
+        write_caddy_dmad_basic_auth "${DMAD_DOMAIN}" "${username}" "${hashed_password}"
         restart_caddy
         echo "✅ Enable Basic Authentication success"
         echo

@@ -355,6 +355,9 @@ case "$1" in
   git fetch origin main && git pull
   exit
   ;;
+--setup-completion | -setup-completion | setup-completion)
+  sudo ln -s "${BASE_DIR}/dmad_completion.sh" /etc/bash_completion.d/dmad
+  ;;
 *)
   echo "$1 in validate"
   exit 1

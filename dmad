@@ -191,7 +191,7 @@ install_credentials() {
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
   WIREGUARD_URL="http://0.0.0.0:51821"
   PIHOLE_URL="http://10.2.0.100/admin"
-  DMAD_DOMAIN=$(ask_info "Enter DMAD_DOMAIN" "dmad.nguyenanhung.com")
+  DMAD_DOMAIN=$(ask_info "Enter DMAD_DOMAIN" "dmad.your.host")
 
   # Setting the wireguard host endpoint
   WG_HOST=$(ask_info "Enter WG_HOST" "$SERVER_IP")

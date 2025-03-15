@@ -9,6 +9,7 @@ fi
 
 # Export BASE_DIR to be available in sourced files
 export BASE_DIR
+SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
 
 has_command() {
   command -v "$1" >/dev/null 2>&1
@@ -143,15 +144,33 @@ pihole.${DOMAIN} {
 EOL
 }
 caddy_validate() {
-  docker exec caddy caddy validate --config "/etc/caddy/Caddyfile"
+  local CADDY_NAME="caddy"
+  if [ -e "${BASE_DIR}/.env" ]; then
+    source .env
+  fi
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    if docker inspect "${CADDY_CONTAINER_NAME}" >/dev/null 2>&1; then
+      CADDY_NAME="${CADDY_CONTAINER_NAME}"
+    fi
+  fi
+  docker exec "${CADDY_NAME}" caddy validate --config "/etc/caddy/Caddyfile"
 }
 caddy_reload() {
-  echo "Reloading Caddy..."
-  if docker restart caddy; then
+  local CADDY_NAME="caddy"
+  if [ -e "${BASE_DIR}/.env" ]; then
+    source .env
+  fi
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    if docker inspect "${CADDY_CONTAINER_NAME}" >/dev/null 2>&1; then
+      CADDY_NAME="${CADDY_CONTAINER_NAME}"
+    fi
+  fi
+  echo "🔄 Reloading Caddy Web Server..."
+  if docker restart "${CADDY_NAME}"; then
     echo "✅ Caddy reloaded successfully"
   else
-    echo "❌ Failed to reload Caddy. Please check logs Caddy container"
-    docker logs caddy --tail 50
+    echo "❌ Failed to reload Caddy Web Server. Please check logs Caddy container"
+    docker logs "${CADDY_NAME}" --tail 50
     return 1
   fi
 }
@@ -159,7 +178,7 @@ restart_caddy() {
   if caddy_validate; then
     caddy_reload
   else
-    echo "Caddy configuration is not valid"
+    echo "Caddy Web Server configuration is not valid"
     return 1
   fi
 }
@@ -197,14 +216,14 @@ install_credentials() {
   WG_HOST=$(ask_info "Enter WG_HOST" "$SERVER_IP")
 
   if ! ask_confirm "Are you installing on Server/VPS environment?"; then
-    ON_LOCAL="YES"
+    ON_LOCAL="NO"
     if ask_confirm "If you have a domain name and plan to use DNS domain name instead of real IP. Make sure you point the domains ${DMAD_DOMAIN}, wireguard.${DMAD_DOMAIN}, pihole.${DMAD_DOMAIN} to ${SERVER_IP}."; then
       WG_HOST="${DMAD_DOMAIN}"
       WIREGUARD_URL="https://wireguard.${DMAD_DOMAIN}"
       PIHOLE_URL="https://pihole.${DMAD_DOMAIN}"
     fi
   else
-    ON_LOCAL="NO"
+    ON_LOCAL="YES"
     local DYNAMIC_DNS_SERVER
     DYNAMIC_DNS_SERVER=$(ask_info "If you are installing this script on a local computer or raspberry pi, home-lab then you may need to use a dynamic DNS provider solution. Enter your dynamic DNS provider address." "my.ddns.net")
     WG_HOST="${DYNAMIC_DNS_SERVER}"
@@ -230,6 +249,9 @@ install_credentials() {
   local PIHOLE_DNS1="10.2.0.200"
   local PIHOLE_DNS2="1.1.1.1"
 
+  if [ -f "${BASE_DIR}/.env" ]; then
+    rm -f "${BASE_DIR}/.env"
+  fi
   # Create .env credentials
   cat >.env <<EOL
 # dmad
@@ -265,10 +287,12 @@ PIHOLE_DNS2=${PIHOLE_DNS2}
 EOL
 
   # Setting Caddyfile
-  true >Caddyfile # Clear existing content
-  write_base_caddyfile >>Caddyfile
-  if ask_confirm "Do you want to enable Caddy HTTPS for wireguard and pihole? (NOTE: If you install this script on a local computer or raspberry pi, home-lab, you can skip this option to use the local IP.)"; then
-    write_caddy_https_config "${DMAD_DOMAIN}"
+  if [[ "$EXISTS_CADDY_CONTAINER" == "NO" ]]; then
+    true >Caddyfile # Clear existing content
+    write_base_caddyfile >>Caddyfile
+    if ask_confirm "Do you want to enable Caddy HTTPS for wireguard and pihole? (NOTE: If you install this script on a local computer or raspberry pi, home-lab, you can skip this option to use the local IP.)"; then
+      write_caddy_https_config "${DMAD_DOMAIN}"
+    fi
   fi
 
   echo "Credentials updated successfully!"
@@ -290,7 +314,7 @@ EOL
   echo "PIHOLE_WEBPASSWORD: ${PIHOLE_WEBPASSWORD}"
   echo
   echo "----------------------------------------------------------------"
-  echo "Need to point DNS of domain names: ${WG_HOST}, wireguard.${WG_HOST}, pihole.${WG_HOST} to server IP $(curl -sSL https://checkip.amazonaws.com) first to complete configuration"
+  echo "Need to point DNS of domain names: ${WG_HOST}, wireguard.${WG_HOST}, pihole.${WG_HOST} to server IP ${SERVER_IP} first to complete configuration"
   echo "----------------------------------------------------------------"
   echo
 }
@@ -309,6 +333,7 @@ update_basic_auth() {
         source .env
         write_caddy_dmad_basic_auth "${DMAD_DOMAIN}" "${username}" "${hashed_password}"
         restart_caddy
+        wait_for_health "caddy" "Caddy Web Server"
         echo "✅ Enable Basic Authentication success"
         echo
         echo "--------------------------------"
@@ -339,27 +364,73 @@ case "$1" in
     echo "Failed to update credentials"
     exit 1
   fi
-  if [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+  source .env
+
+  WITHOUT_CADDY="NO"
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    WITHOUT_CADDY="YES"
+  fi
+
+  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
     echo "Failed to update Caddyfile"
     exit 1
   fi
 
-  if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
+  # Start the DMAD Container
+  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
     cd "$BASE_DIR" || {
       echo "Failed to change directory"
       exit 1
     }
-    docker compose up -d
-    update_basic_auth # Update basic authentication
+    if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
+      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
+      exit 1
+    fi
+    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+    wait_for_health "wg-easy" "Wireguard VPN Server"
+    wait_for_health "unbound" "Unbound DNS Resolver"
+    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+    echo "----------------------------------------------------------------"
+    echo
+    echo -e "✅ D.M ADS service installation is complete."
+    echo
+    echo -e "➡️ Since you have provided information that you have Caddy Web Server installed, the system will not automatically install Caddy. If you want to configure domain for Wireguard and Pi-hole, you need to configure it manually in your Caddy Web Server!"
+    echo
+    echo -e "👉 Proceed to point domain ${WIREGUARD_URL} and ${PIHOLE_URL} to IP ${SERVER_IP}"
+    echo
+    echo -e "👉 Configure Caddy Web Server sites with the following information"
+    echo
+    echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
+    echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
+    echo
+    echo "----------------------------------------------------------------"
   else
-    if [ -f "${BASE_DIR}/.env" ]; then
-      rm -f "${BASE_DIR}/.env"
+    if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
+      cd "$BASE_DIR" || {
+        echo "Failed to change directory"
+        exit 1
+      }
+      if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
+        echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+        exit 1
+      fi
+      docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+      wait_for_health "wg-easy" "Wireguard VPN Server"
+      wait_for_health "unbound" "Unbound DNS Resolver"
+      wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+      wait_for_health "caddy" "Caddy Web Server"
+      update_basic_auth # Update basic authentication
+    else
+      if [ -f "${BASE_DIR}/.env" ]; then
+        rm -f "${BASE_DIR}/.env"
+      fi
+      if [ -f "${BASE_DIR}/Caddyfile" ]; then
+        rm -f "${BASE_DIR}/Caddyfile"
+      fi
+      echo "Process cancelled! "
+      exit
     fi
-    if [ -f "${BASE_DIR}/Caddyfile" ]; then
-      rm -f "${BASE_DIR}/Caddyfile"
-    fi
-    echo "Process cancelled! "
-    exit
   fi
   ;;
 --basic-auth | -basic-auth | basic-auth | --auth | -auth | auth | a)
@@ -395,11 +466,46 @@ case "$1" in
   exit
   ;;
 --up | -up | up)
-  docker compose up -d
-  wait_for_health "wg-easy" "Wireguard VPN Server"
-  wait_for_health "unbound" "Unbound DNS Resolver"
-  wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
-  wait_for_health "caddy" "Caddy Web Server"
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  source .env
+
+  WITHOUT_CADDY="NO"
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    WITHOUT_CADDY="YES"
+  fi
+
+  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+    echo "Failed to update Caddyfile"
+    exit 1
+  fi
+  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+    cd "$BASE_DIR" || {
+      echo "Failed to change directory"
+      exit 1
+    }
+    if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
+      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
+      exit 1
+    fi
+    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+    wait_for_health "wg-easy" "Wireguard VPN Server"
+    wait_for_health "unbound" "Unbound DNS Resolver"
+    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+  else
+    if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
+      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+      exit 1
+    fi
+    docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+    wait_for_health "wg-easy" "Wireguard VPN Server"
+    wait_for_health "unbound" "Unbound DNS Resolver"
+    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+    wait_for_health "caddy" "Caddy Web Server"
+  fi
   exit
   ;;
 --self-update | -self-update | self-update)

@@ -341,7 +341,7 @@ EOL
   echo "PIHOLE_WEBPASSWORD: ${PIHOLE_WEBPASSWORD}"
   echo
   echo "----------------------------------------------------------------"
-  echo "Need to point DNS of domain names: ${WG_HOST}, wireguard.${WG_HOST}, pihole.${WG_HOST} to server IP ${SERVER_IP} first to complete configuration"
+  echo "Need to point DNS of domain names: ${DMAD_DOMAIN}, wireguard.${DMAD_DOMAIN}, pihole.${DMAD_DOMAIN} to server IP ${SERVER_IP} first to complete configuration"
   echo "----------------------------------------------------------------"
   echo
 }
@@ -439,8 +439,8 @@ case "$1" in
     echo
     echo -e "➡️ First, you need to allow Caddy Web Server container ${CADDY_CONTAINER_NAME} connect to ${DMAD_NETWORK}"
     echo -e "and, you need to configure reverse proxy for the wireguard and Pi-hole on the Caddy Web Server"
-    echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
-    echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
+    echo -e "➡️ wireguard.${DMAD_DOMAIN} -> reverse_proxy to wg-easy:51821"
+    echo -e "➡️ pihole.${DMAD_DOMAIN} -> reverse_proxy to pihole:80"
     echo
     echo "----------------------------------------------------------------"
   else
@@ -718,8 +718,8 @@ case "$1" in
   echo
   echo -e "➡️ First, you need to allow Caddy Web Server container ${CADDY_CONTAINER_NAME} connect to ${DMAD_NETWORK}"
   echo -e "and, you need to configure reverse proxy for the wireguard and Pi-hole on the Caddy Web Server"
-  echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
-  echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
+  echo -e "➡️ wireguard.${DMAD_DOMAIN} -> reverse_proxy to wg-easy:51821"
+  echo -e "➡️ pihole.${DMAD_DOMAIN} -> reverse_proxy to pihole:80"
   echo
   echo "----------------------------------------------------------------"
   exit

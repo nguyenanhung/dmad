@@ -235,9 +235,11 @@ install_credentials() {
 
   local EXISTS_CADDY_CONTAINER="NO"
   local CADDY_CONTAINER_NAME="caddy"
+  local CADDY_CONTAINER_NETWORK_NAME=""
   if ask_confirm "Yes if you already have a Caddy Web Server on your server!"; then
     EXISTS_CADDY_CONTAINER="YES"
     CADDY_CONTAINER_NAME=$(ask_info "Enter your Caddy Web Server Container Name" "caddy")
+    CADDY_CONTAINER_NETWORK_NAME=$(ask_info "Enter your Caddy Web Server Container Name Network Name" "bear_caddy_net")
   fi
 
   # Default environment
@@ -259,6 +261,7 @@ DMAD_DOMAIN=${DMAD_DOMAIN}
 ON_LOCAL=${ON_LOCAL}
 EXISTS_CADDY_CONTAINER=${EXISTS_CADDY_CONTAINER}
 CADDY_CONTAINER_NAME=${CADDY_CONTAINER_NAME}
+CADDY_CONTAINER_NETWORK_NAME=${CADDY_CONTAINER_NETWORK_NAME}
 
 # wg-easy
 WIREGUARD_URL=${WIREGUARD_URL}
@@ -392,6 +395,11 @@ case "$1" in
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+    # Connect Caddy Network
+    if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+    fi
     echo "----------------------------------------------------------------"
     echo
     echo -e "✅ D.M ADS service installation is complete."
@@ -493,6 +501,11 @@ case "$1" in
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+    # Connect Caddy Network
+    if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+    fi
   else
     if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
@@ -575,6 +588,11 @@ case "$1" in
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+    # Connect Caddy Network
+    if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+    fi
   else
     echo -e "Error configuring docker Caddy"
     echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"

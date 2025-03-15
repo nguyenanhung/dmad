@@ -397,8 +397,12 @@ case "$1" in
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     # Connect Caddy Network
     if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
+        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
+      fi
+      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
+        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
+      fi
     fi
     echo "----------------------------------------------------------------"
     echo
@@ -503,8 +507,12 @@ case "$1" in
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     # Connect Caddy Network
     if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
+        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
+      fi
+      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
+        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
+      fi
     fi
   else
     if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
@@ -590,8 +598,12 @@ case "$1" in
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     # Connect Caddy Network
     if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
+        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
+      fi
+      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
+        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
+      fi
     fi
   else
     echo -e "Error configuring docker Caddy"
@@ -612,9 +624,56 @@ case "$1" in
   source .env
   # Connect Caddy Network
   if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-    docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
-    docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
+    fi
+    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
+    fi
   fi
+  exit
+  ;;
+--enable-domain-external-caddy | -enable-domain-external-caddy | enable-domain-external-caddy)
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+
+  WITHOUT_CADDY="NO"
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    WITHOUT_CADDY="YES"
+  fi
+
+  if [ "$WITHOUT_CADDY" = "NO" ]; then
+    echo "Failed to continue. You not enable external caddy configure"
+    exit 1
+  fi
+  # Connect Caddy Network
+  if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
+    fi
+    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
+      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
+    fi
+  fi
+  echo "----------------------------------------------------------------"
+  echo
+  echo -e "➡️ Since you have provided information that you have Caddy Web Server installed, the system will not automatically install Caddy. If you want to configure domain for Wireguard and Pi-hole, you need to configure it manually in your Caddy Web Server!"
+  echo
+  echo -e "👉 Proceed to point domain ${WIREGUARD_URL} and ${PIHOLE_URL} to IP ${SERVER_IP}"
+  echo
+  echo -e "👉 Configure Caddy Web Server sites with the following information"
+  echo
+  echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
+  echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
+  echo
+  echo "----------------------------------------------------------------"
   exit
   ;;
 --self-update | -self-update | self-update)

@@ -8,20 +8,21 @@ _dmad_completion() {
 
   # Define available options as an array for easy extension
   opts=(
-    "install"               # Installation-related commands
-    "basic-auth"            # Basic authentication commands
-    "reload-caddy"          # Caddy reload commands
-    "log"                   # Logging commands
-    "down"                  # Docker compose down command
-    "up"                    # Docker compose up command
-    "up-with-caddy"         # Docker compose up with Caddy command
-    "up-without-caddy"      # Docker compose up without Caddy command
-    "status"                # Docker status command
-    "self-update"           # Self-update command
-    "setup-completion"      # Setup completion command
-    "pihole-subscribe-list" # Update pihole subscribe list command
-    "pihole-setpassword"    # Update pihole password command
-    "join-caddy-network"    # Join Caddy network command
+    "install"                      # Installation-related commands
+    "basic-auth"                   # Basic authentication commands
+    "reload-caddy"                 # Caddy reload commands
+    "log"                          # Logging commands
+    "down"                         # Docker compose down command
+    "up"                           # Docker compose up command
+    "up-with-caddy"                # Docker compose up with Caddy command
+    "up-without-caddy"             # Docker compose up without Caddy command
+    "status"                       # Docker status command
+    "self-update"                  # Self-update command
+    "setup-completion"             # Setup completion command
+    "pihole-subscribe-list"        # Update pihole subscribe list command
+    "pihole-setpassword"           # Update pihole password command
+    "join-caddy-network"           # Join Caddy network command
+    "enable-domain-external-caddy" # Enable domain external Caddy command
   )
 
   # Check if the previous word is '--log', '-log', or 'log'

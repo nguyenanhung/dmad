@@ -214,6 +214,13 @@ install_credentials() {
   WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
   PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
 
+  local EXISTS_CADDY_CONTAINER="NO"
+  local CADDY_CONTAINER_NAME="caddy"
+  if ask_confirm "Yes if you already have a Caddy Web Server on your server!"; then
+    EXISTS_CADDY_CONTAINER="YES"
+    CADDY_CONTAINER_NAME=$(ask_info "Enter your Caddy Web Server Container Name" "caddy")
+  fi
+
   # Default environment
   local WG_PORT="51820"
   local WG_DEFAULT_ADDRESS="10.6.0.x"
@@ -228,6 +235,8 @@ install_credentials() {
 # dmad
 DMAD_DOMAIN=${DMAD_DOMAIN}
 ON_LOCAL=${ON_LOCAL}
+EXISTS_CADDY_CONTAINER=${EXISTS_CADDY_CONTAINER}
+CADDY_CONTAINER_NAME=${CADDY_CONTAINER_NAME}
 
 # wg-easy
 WIREGUARD_URL=${WIREGUARD_URL}
@@ -241,7 +250,6 @@ WG_PERSISTENT_KEEPALIVE=${WG_PERSISTENT_KEEPALIVE}
 # - WG_ALLOWED_IPS=192.168.15.0/24, 10.0.1.0/24
 # - WG_INTERFACE=wg0
 # - WG_MTU=1420
-# - WG_ALLOWED_IPS=192.168.15.0/24, 10.0.1.0/24
 # - WG_PRE_UP=echo "Pre Up" > /etc/wireguard/pre-up.txt
 # - WG_POST_UP=echo "Post Up" > /etc/wireguard/post-up.txt
 # - WG_PRE_DOWN=echo "Pre Down" > /etc/wireguard/pre-down.txt
@@ -335,6 +343,7 @@ case "$1" in
     echo "Failed to update Caddyfile"
     exit 1
   fi
+
   if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
     cd "$BASE_DIR" || {
       echo "Failed to change directory"

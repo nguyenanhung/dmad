@@ -1,10 +1,7 @@
 version: '3'
 networks:
-    private_network:
-        ipam:
-            driver: default
-            config:
-                -   subnet: 10.2.0.0/24
+    dmad_private_network:
+        external: true
 
 services:
     unbound:
@@ -13,7 +10,7 @@ services:
         restart: unless-stopped
         hostname: "unbound"
         networks:
-            private_network:
+            dmad_private_network:
                 ipv4_address: 10.2.0.200
         #        deploy:
         #            resources:
@@ -42,7 +39,7 @@ services:
         cap_add:
             - NET_ADMIN
         networks:
-            private_network:
+            dmad_private_network:
                 ipv4_address: 10.2.0.100
         healthcheck:
             test: [ "CMD", "dig", "@127.0.0.1", "google.com" ]
@@ -71,7 +68,7 @@ services:
             - 10.2.0.100
             - 10.2.0.200
         networks:
-            private_network:
+            dmad_private_network:
                 ipv4_address: 10.2.0.3
         depends_on:
             - pihole
@@ -90,7 +87,7 @@ services:
             - caddy_data:/data
             - caddy_config:/config
         networks:
-            private_network:
+            dmad_private_network:
                 ipv4_address: 10.2.0.4
         healthcheck:
             test: [ "CMD", "pgrep", "caddy" ]

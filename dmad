@@ -10,6 +10,8 @@ fi
 # Export BASE_DIR to be available in sourced files
 export BASE_DIR
 SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
+DMAD_PRIVATE_NETWORK_NAME="dmad_private_network"
+DMAD_PRIVATE_NETWORK_SUBNET="10.2.0.0/24"
 
 has_command() {
   command -v "$1" >/dev/null 2>&1
@@ -205,6 +207,26 @@ install_packages() {
       sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
   fi
 }
+create_dmad_network() {
+  local DM_ADS_NETWORK_NAME="${DMAD_PRIVATE_NETWORK_NAME}"
+  if [ -e "${BASE_DIR}/.env" ]; then
+    source .env
+  fi
+
+  if [ -n "$DMAD_NETWORK" ]; then
+    DM_ADS_NETWORK_NAME="${DMAD_NETWORK}"
+  fi
+
+  if ! docker network ls --format '{{.Name}}' | grep -q "^${DM_ADS_NETWORK_NAME}$"; then
+    echo "🚀 Create network ${DM_ADS_NETWORK_NAME} with subnet ${DMAD_PRIVATE_NETWORK_SUBNET}..."
+    docker network create \
+      --driver=bridge \
+      --subnet=${DMAD_PRIVATE_NETWORK_SUBNET} \
+      "${DM_ADS_NETWORK_NAME}"
+  else
+    echo "👌 Network ${DM_ADS_NETWORK_NAME} already exists"
+  fi
+}
 install_credentials() {
   local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
@@ -258,6 +280,8 @@ install_credentials() {
   cat >.env <<EOL
 # dmad
 DMAD_DOMAIN=${DMAD_DOMAIN}
+DMAD_NETWORK=${DMAD_PRIVATE_NETWORK_NAME}
+DMAD_NETWORK_SUBNET=${DMAD_PRIVATE_NETWORK_SUBNET}
 ON_LOCAL=${ON_LOCAL}
 EXISTS_CADDY_CONTAINER=${EXISTS_CADDY_CONTAINER}
 CADDY_CONTAINER_NAME=${CADDY_CONTAINER_NAME}
@@ -391,6 +415,7 @@ case "$1" in
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
       exit 1
     fi
+    create_dmad_network
     docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
@@ -412,7 +437,8 @@ case "$1" in
     echo
     echo -e "👉 Configure Caddy Web Server sites with the following information"
     echo
-    echo -e "➡️ First, you need to allow 2 containers: pihole and wg-easy to connect to your Caddy Web Server network"
+    echo -e "➡️ First, you need to allow Caddy Web Server container ${CADDY_CONTAINER_NAME} connect to ${DMAD_NETWORK}"
+    echo -e "and, you need to configure reverse proxy for the wireguard and Pi-hole on the Caddy Web Server"
     echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
     echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
     echo
@@ -423,6 +449,7 @@ case "$1" in
         echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
         exit 1
       fi
+      create_dmad_network
       docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
       wait_for_health "wg-easy" "Wireguard VPN Server"
       wait_for_health "unbound" "Unbound DNS Resolver"
@@ -470,7 +497,24 @@ case "$1" in
   exit
   ;;
 --down | -down | down)
-  docker compose down
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+  WITHOUT_CADDY="NO"
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    WITHOUT_CADDY="YES"
+  fi
+  if [ "$WITHOUT_CADDY" = "YES" ]; then
+    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
+  else
+    docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
+  fi
   exit
   ;;
 --up | -up | up)
@@ -500,6 +544,7 @@ case "$1" in
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
       exit 1
     fi
+    create_dmad_network
     docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
@@ -516,6 +561,7 @@ case "$1" in
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
       exit 1
     fi
+    create_dmad_network
     docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
@@ -554,6 +600,7 @@ case "$1" in
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
       exit 1
     fi
+    create_dmad_network
     docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
@@ -589,6 +636,7 @@ case "$1" in
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
       exit 1
     fi
+    create_dmad_network
     docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"

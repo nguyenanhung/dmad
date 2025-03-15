@@ -14,6 +14,8 @@ _dmad_completion() {
     "log"                   # Logging commands
     "down"                  # Docker compose down command
     "up"                    # Docker compose up command
+    "up-with-caddy"         # Docker compose up with Caddy command
+    "up-without-caddy"      # Docker compose up without Caddy command
     "status"                # Docker status command
     "self-update"           # Self-update command
     "setup-completion"      # Setup completion command

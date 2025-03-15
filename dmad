@@ -377,12 +377,13 @@ case "$1" in
     exit 1
   fi
 
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+
   # Start the DMAD Container
   if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-    cd "$BASE_DIR" || {
-      echo "Failed to change directory"
-      exit 1
-    }
     if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
       exit 1
@@ -407,10 +408,6 @@ case "$1" in
     echo "----------------------------------------------------------------"
   else
     if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
-      cd "$BASE_DIR" || {
-        echo "Failed to change directory"
-        exit 1
-      }
       if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
         echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
         exit 1
@@ -470,6 +467,11 @@ case "$1" in
     echo "Failed to update credentials"
     exit 1
   fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+
   source .env
 
   WITHOUT_CADDY="NO"
@@ -483,10 +485,6 @@ case "$1" in
     exit 1
   fi
   if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-    cd "$BASE_DIR" || {
-      echo "Failed to change directory"
-      exit 1
-    }
     if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
       echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
       exit 1
@@ -505,6 +503,82 @@ case "$1" in
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     wait_for_health "caddy" "Caddy Web Server"
+  fi
+  exit
+  ;;
+--up-with-caddy | -up-with-caddy | up-with-caddy)
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+
+  WITHOUT_CADDY="NO"
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    WITHOUT_CADDY="YES"
+  fi
+
+  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+    echo "Failed to update Caddyfile"
+    exit 1
+  fi
+  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+    echo -e "Error configuring docker Caddy"
+    echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"
+    echo "CADDY_CONTAINER_NAME: ${CADDY_CONTAINER_NAME}"
+  else
+    if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
+      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+      exit 1
+    fi
+    docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+    wait_for_health "wg-easy" "Wireguard VPN Server"
+    wait_for_health "unbound" "Unbound DNS Resolver"
+    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+    wait_for_health "caddy" "Caddy Web Server"
+  fi
+  exit
+  ;;
+--up-without-caddy | -up-without-caddy | up-without-caddy)
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+
+  WITHOUT_CADDY="NO"
+  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+    WITHOUT_CADDY="YES"
+  fi
+
+  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+    echo "Failed to update Caddyfile"
+    exit 1
+  fi
+
+  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+    if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
+      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
+      exit 1
+    fi
+    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+    wait_for_health "wg-easy" "Wireguard VPN Server"
+    wait_for_health "unbound" "Unbound DNS Resolver"
+    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+  else
+    echo -e "Error configuring docker Caddy"
+    echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"
+    echo "CADDY_CONTAINER_NAME: ${CADDY_CONTAINER_NAME}"
   fi
   exit
   ;;

@@ -9,7 +9,8 @@ via Unbound).
 D.M ADS (Đ*t m3 advertising) is added a Web UI for WireGuard Client Management. It uses the Docker image
 of [wg-easy](https://github.com/WeeJeWel/wg-easy), replacing the Linux server's WireGuard image.
 
-Additionally, it has a built-in `Caddy Web Server`, making access to wireguard and pi-hole portal more secure. You can also use it as a reverse proxy routing
+Additionally, it has a built-in `Caddy Web Server`, making access to wireguard and pi-hole portal more secure. You can
+also use it as a reverse proxy routing
 
 <p align="center">
   <img src="./wg-easy-ui.png" width="702" />
@@ -84,6 +85,9 @@ Next
 
 - `DMAD_DOMAIN=dmad.domain`
 - `ON_LOCAL=YES`: YES if installing in a local network, NO if it is a server environment
+- `EXISTS_CADDY_CONTAINER=NO`: YES if you already have a Caddy Web Server container
+- `CADDY_CONTAINER_NAME=caddy`: Name of existing Caddy container (if any)
+- `CADDY_CONTAINER_NETWORK_NAME=`: The name of the network running Caddy already exists (if any)
 
 - `WIREGUARD_URL=https://wire.guard`
 - `WG_HOST=dmad.host`
@@ -92,7 +96,8 @@ Next
 - `PIHOLE_URL=https://pi.hole`
 - `PIHOLE_WEBPASSWORD=secure_password_here`
 
-If installing in a local environment, you do not need to do anything more, run the command: `docker compose up -d`
+If installing in a local environment, you do not need to do anything more, run the command:
+`docker compose -f docker-compose-without-caddy.yml up -d`
 
 If installing on a server environment, you may want to configure HTTPS
 
@@ -101,7 +106,10 @@ If installing on a server environment, you may want to configure HTTPS
 - Update the configuration information in the file `sites/dmad.caddy`. Some information you need to update
 - `wire.guard`: This is the value of the variable `WIREGUARD_URL` (excluding http/https://)
 - `pi.hole`: This is the value of the variable `PIHOLE_URL` (excluding http/https://)
-- Then run the command: `docker compose up -d`
+- Then run the command:
+    - `docker compose -f docker-compose-with-caddy.yml up -d`: If you do not have Caddy Web Server or a new Server with
+      nothing installed!
+    - `docker compose -f docker-compose-without-caddy.yml up -d`: If you already have a Caddy Web Server container
 
 Change `WG_HOST=my.ddns.net` to your server's public address, e.g. `WG_HOST=vpn.mydomain.com`.
 > By default, any WireGuard client will have access to the Web UI, unless you set a password.

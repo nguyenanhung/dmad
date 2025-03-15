@@ -630,6 +630,13 @@ case "$1" in
   }
   source .env
   # Connect Caddy Network
+  if [ -z "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+    CADDY_CONTAINER_NETWORK_NAME=$(ask_info "Enter your Caddy Web Server Container Name Network Name" "bear_caddy_net")
+  fi
+  if [ -z "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+    echo -e "❌ Caddy Web Server network it not available. Please make sure it is available and try again!"
+    exit 1
+  fi
   if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
     if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
       docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
@@ -663,6 +670,13 @@ case "$1" in
     exit 1
   fi
   # Connect Caddy Network
+  if [ -z "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+    CADDY_CONTAINER_NETWORK_NAME=$(ask_info "Enter your Caddy Web Server Container Name Network Name" "bear_caddy_net")
+  fi
+  if [ -z "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+    echo -e "❌ Caddy Web Server network it not available. Please make sure it is available and try again!"
+    exit 1
+  fi
   if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
     if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
       docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy

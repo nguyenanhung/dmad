@@ -396,14 +396,10 @@ case "$1" in
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     # Connect Caddy Network
-    if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
-        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
-        echo -e "➡️ Wireguard container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
-      fi
-      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
-        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
-        echo -e "➡️ Pi-hole container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
+    if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+      if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+        docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+        echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
       fi
     fi
     echo "----------------------------------------------------------------"
@@ -509,14 +505,10 @@ case "$1" in
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     # Connect Caddy Network
-    if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
-        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
-        echo -e "➡️ Wireguard container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
-      fi
-      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
-        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
-        echo -e "➡️ Pi-hole container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
+    if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+      if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+        docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+        echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
       fi
     fi
   else
@@ -602,14 +594,10 @@ case "$1" in
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
     # Connect Caddy Network
-    if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
-        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
-        echo -e "➡️ Wireguard container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
-      fi
-      if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
-        docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
-        echo -e "➡️ Pi-hole container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
+    if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+      if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+        docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+        echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
       fi
     fi
   else
@@ -637,14 +625,10 @@ case "$1" in
     echo -e "❌ Caddy Web Server network it not available. Please make sure it is available and try again!"
     exit 1
   fi
-  if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
-      echo -e "➡️ Wireguard container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
-    fi
-    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
-      echo -e "➡️ Pi-hole container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
+  if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+    if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+      docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+      echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
     fi
   fi
   exit
@@ -670,21 +654,10 @@ case "$1" in
     exit 1
   fi
   # Connect Caddy Network
-  if [ -z "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-    CADDY_CONTAINER_NETWORK_NAME=$(ask_info "Enter your Caddy Web Server Container Name Network Name" "bear_caddy_net")
-  fi
-  if [ -z "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-    echo -e "❌ Caddy Web Server network it not available. Please make sure it is available and try again!"
-    exit 1
-  fi
-  if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
-    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "wg-easy"'; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" wg-easy
-      echo -e "➡️ Wireguard container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
-    fi
-    if ! docker network inspect "${CADDY_CONTAINER_NETWORK_NAME}" | grep -q '"Name": "pihole"'; then
-      docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" pihole
-      echo -e "➡️ Pi-hole container Joining to Caddy Network ${CADDY_CONTAINER_NETWORK_NAME} success"
+  if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+    if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+      docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+      echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
     fi
   fi
   echo "----------------------------------------------------------------"
@@ -695,7 +668,8 @@ case "$1" in
   echo
   echo -e "👉 Configure Caddy Web Server sites with the following information"
   echo
-  echo -e "➡️ First, you need to allow 2 containers: pihole and wg-easy to connect to your Caddy Web Server network"
+  echo -e "➡️ First, you need to allow Caddy Web Server container ${CADDY_CONTAINER_NAME} connect to ${DMAD_NETWORK}"
+  echo -e "and, you need to configure reverse proxy for the wireguard and Pi-hole on the Caddy Web Server"
   echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
   echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
   echo

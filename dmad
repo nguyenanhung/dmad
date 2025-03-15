@@ -416,6 +416,7 @@ case "$1" in
     echo
     echo -e "👉 Configure Caddy Web Server sites with the following information"
     echo
+    echo -e "➡️ First, you need to allow 2 containers: pihole and wg-easy to connect to your Caddy Web Server network"
     echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
     echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
     echo
@@ -680,6 +681,7 @@ case "$1" in
   echo
   echo -e "👉 Configure Caddy Web Server sites with the following information"
   echo
+  echo -e "➡️ First, you need to allow 2 containers: pihole and wg-easy to connect to your Caddy Web Server network"
   echo -e "➡️ wireguard.${WG_HOST} -> reverse_proxy to wg-easy:51821"
   echo -e "➡️ pihole.${WG_HOST} -> reverse_proxy to pihole:80"
   echo

@@ -21,6 +21,7 @@ _dmad_completion() {
     "setup-completion"      # Setup completion command
     "pihole-subscribe-list" # Update pihole subscribe list command
     "pihole-setpassword"    # Update pihole password command
+    "join-caddy-network"    # Join Caddy network command
   )
 
   # Check if the previous word is '--log', '-log', or 'log'

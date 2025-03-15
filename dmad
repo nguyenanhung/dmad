@@ -600,6 +600,23 @@ case "$1" in
   fi
   exit
   ;;
+--join-caddy-network | -join-caddy-network | join-caddy-network)
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+  # Connect Caddy Network
+  if [ -n "$CADDY_CONTAINER_NETWORK_NAME" ]; then
+    docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "wg-easy"
+    docker network connect "${CADDY_CONTAINER_NETWORK_NAME}" "pihole"
+  fi
+  exit
+  ;;
 --self-update | -self-update | self-update)
   git fetch origin main && git pull
   exit

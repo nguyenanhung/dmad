@@ -185,6 +185,10 @@ restart_caddy() {
   fi
 }
 install_packages() {
+  echo "----------------------------------------------------------------"
+  echo "Server Initial Setup"
+  echo "----------------------------------------------------------------"
+  echo
   # Init setup
   sudo apt update && sudo apt install -yqq curl git apt-transport-https ca-certificates gnupg-agent software-properties-common
 
@@ -232,6 +236,11 @@ install_credentials() {
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
   WIREGUARD_URL="http://0.0.0.0:51821"
   PIHOLE_URL="http://10.2.0.100/admin"
+  echo
+  echo "----------------------------------------------------------------"
+  echo "Install credentials for DMAD Service"
+  echo "----------------------------------------------------------------"
+  echo
   DMAD_DOMAIN=$(ask_info "Enter DMAD_DOMAIN" "dmad.your.host")
 
   # Setting the wireguard host endpoint

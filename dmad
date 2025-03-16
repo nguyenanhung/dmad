@@ -237,7 +237,7 @@ install_credentials() {
   # Setting the wireguard host endpoint
   WG_HOST=$(ask_info "Enter WG_HOST" "$SERVER_IP")
 
-  if ! ask_confirm "Are you installing on Server/VPS environment?"; then
+  if ask_confirm "Are you installing on Server/VPS environment?"; then
     ON_LOCAL="NO"
     if ask_confirm "If you have a domain name and plan to use DNS domain name instead of real IP. Make sure you point the domains ${DMAD_DOMAIN}, wireguard.${DMAD_DOMAIN}, pihole.${DMAD_DOMAIN} to ${SERVER_IP}."; then
       WG_HOST="${DMAD_DOMAIN}"

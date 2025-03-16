@@ -260,7 +260,12 @@ install_credentials() {
     WG_HOST="${DYNAMIC_DNS_SERVER}"
   fi
 
-  PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "Asia/Hong_Kong")
+  local CURRENT_TIMEZONE
+  CURRENT_TIMEZONE=$(timedatectl show --property=Timezone --value)
+  if [ -z "$CURRENT_TIMEZONE" ]; then
+    CURRENT_TIMEZONE="Asia/Singapore"
+  fi
+  PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "${CURRENT_TIMEZONE}")
   WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
   PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
 
@@ -269,7 +274,7 @@ install_credentials() {
   local CADDY_CONTAINER_NETWORK_NAME=""
   if ask_confirm "Yes if you already have a Caddy Web Server on your server!"; then
     EXISTS_CADDY_CONTAINER="YES"
-    CADDY_CONTAINER_NAME=$(ask_info "Enter your Caddy Web Server Container Name" "caddy")
+    CADDY_CONTAINER_NAME=$(ask_info "Enter your exists Caddy Web Server Container Name" "bear_caddy")
     CADDY_CONTAINER_NETWORK_NAME=$(ask_info "Enter your Caddy Web Server Container Name Network Name" "bear_caddy_net")
   fi
 

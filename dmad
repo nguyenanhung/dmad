@@ -248,10 +248,13 @@ install_credentials() {
 
   if ask_confirm "Are you installing on Server/VPS environment?"; then
     ON_LOCAL="NO"
-    if ask_confirm "If you have a domain name and plan to use DNS domain name instead of real IP. Make sure you point the domains ${DMAD_DOMAIN}, wireguard.${DMAD_DOMAIN}, pihole.${DMAD_DOMAIN} to ${SERVER_IP}."; then
+    if ask_confirm "If you have a domain name and plan to use DNS domain name instead of real IP. Make sure you point the domains wireguard.${DMAD_DOMAIN}, pihole.${DMAD_DOMAIN} to ${SERVER_IP}."; then
       WG_HOST="${DMAD_DOMAIN}"
       WIREGUARD_URL="https://wireguard.${DMAD_DOMAIN}"
       PIHOLE_URL="https://pihole.${DMAD_DOMAIN}"
+    fi
+    if ask_confirm "Do you want to change WG_HOST to ${DMAD_DOMAIN}? (Original: ${SERVER_IP})"; then
+      WG_HOST="${DMAD_DOMAIN}"
     fi
   else
     ON_LOCAL="YES"

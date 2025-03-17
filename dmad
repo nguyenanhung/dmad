@@ -754,6 +754,10 @@ case "$1" in
   exit
   ;;
 --self-update | -self-update | self-update)
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
   git fetch origin main && git pull
   exit
   ;;

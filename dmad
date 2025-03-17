@@ -57,6 +57,19 @@ wait_for_health() {
 
   echo "${service_type} → ${container_name} is healthy"
 }
+docker_compose_command() {
+  if ! has_command docker; then
+    echo "❌ Error: Docker is not installed." >&2
+  fi
+  if has_command docker-compose; then
+    docker-compose "$@"
+  elif docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  else
+    echo "❌ Error: Neither 'docker-compose' nor 'docker compose' is installed." >&2
+    return 1
+  fi
+}
 write_base_caddyfile() {
   cat <<EOL
 {
@@ -206,7 +219,7 @@ install_packages() {
 
   # docker-compose
   if ! has_command "docker-compose"; then
-    sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&
       sudo chmod +x /usr/local/bin/docker-compose &&
       sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
   fi
@@ -432,7 +445,7 @@ case "$1" in
       exit 1
     fi
     create_dmad_network
-    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
@@ -466,7 +479,7 @@ case "$1" in
         exit 1
       fi
       create_dmad_network
-      docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+      docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
       wait_for_health "wg-easy" "Wireguard VPN Server"
       wait_for_health "unbound" "Unbound DNS Resolver"
       wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
@@ -527,9 +540,9 @@ case "$1" in
     WITHOUT_CADDY="YES"
   fi
   if [ "$WITHOUT_CADDY" = "YES" ]; then
-    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
+    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
   else
-    docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
+    docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
   fi
   exit
   ;;
@@ -561,7 +574,7 @@ case "$1" in
       exit 1
     fi
     create_dmad_network
-    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
@@ -578,7 +591,7 @@ case "$1" in
       exit 1
     fi
     create_dmad_network
-    docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+    docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
@@ -617,7 +630,7 @@ case "$1" in
       exit 1
     fi
     create_dmad_network
-    docker compose -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+    docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
@@ -653,7 +666,7 @@ case "$1" in
       exit 1
     fi
     create_dmad_network
-    docker compose -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
     wait_for_health "wg-easy" "Wireguard VPN Server"
     wait_for_health "unbound" "Unbound DNS Resolver"
     wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"

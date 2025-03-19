@@ -57,7 +57,7 @@ services:
             - .:/etc/wireguard
         ports:
             - "51820:51820/udp"
-            - "127.0.0.1:51821:51821/tcp"
+            #- "127.0.0.1:51821:51821/tcp" # By default, mapping port 51821 is disabled, allowing only services on the same docker network to be called for safety.
         cap_add:
             - NET_ADMIN
             - SYS_MODULE

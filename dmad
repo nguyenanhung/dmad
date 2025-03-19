@@ -412,6 +412,113 @@ update_basic_auth() {
   fi
 }
 
+wait_dmad_for_health() {
+  wait_for_health "wg-easy" "Wireguard VPN Server"
+  wait_for_health "unbound" "Unbound DNS Resolver"
+  wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+}
+dmad_up_start_on_local() {
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    if [ ! -e "${BASE_DIR}/docker-compose-on-local.yml" ]; then
+      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-on-local.yml exits"
+      exit 1
+    fi
+    create_dmad_network
+    docker_compose_command -f "${BASE_DIR}/docker-compose-on-local.yml" up -d
+    wait_dmad_for_health
+    wait_for_health "caddy" "Caddy Web Server"
+  fi
+}
+dmad_up_start_without_caddy() {
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+  if [[ "$ON_LOCAL" == "NO" ]]; then
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+
+    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+      echo "Failed to update Caddyfile"
+      exit 1
+    fi
+    if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+      if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
+        echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
+        exit 1
+      fi
+      create_dmad_network
+      docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+      wait_dmad_for_health
+      # Connect Caddy Network
+      if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+        if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+          docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+          echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
+        fi
+      fi
+    else
+      echo -e "Error configuring docker Caddy"
+      echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"
+      echo "CADDY_CONTAINER_NAME: ${CADDY_CONTAINER_NAME}"
+    fi
+  fi
+}
+dmad_up_start_with_caddy() {
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to update credentials"
+    exit 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    exit 1
+  }
+  source .env
+  if [[ "$ON_LOCAL" == "NO" ]]; then
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+
+    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+      echo "Failed to update Caddyfile"
+      exit 1
+    fi
+    if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+      echo -e "Error configuring docker Caddy"
+      echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"
+      echo "CADDY_CONTAINER_NAME: ${CADDY_CONTAINER_NAME}"
+    else
+      if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
+        echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+        exit 1
+      fi
+      create_dmad_network
+      docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+      wait_dmad_for_health
+      wait_for_health "caddy" "Caddy Web Server"
+    fi
+  fi
+}
+
 case "$1" in
 --install | -install | install | i)
   install_packages
@@ -438,51 +545,15 @@ case "$1" in
     exit 1
   }
 
-  # Start the DMAD Container
-  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-    if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
-      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
-      exit 1
-    fi
-    create_dmad_network
-    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
-    wait_for_health "wg-easy" "Wireguard VPN Server"
-    wait_for_health "unbound" "Unbound DNS Resolver"
-    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
-    # Connect Caddy Network
-    if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
-      if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
-        docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
-        echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
-      fi
-    fi
-    echo "----------------------------------------------------------------"
-    echo
-    echo -e "✅ D.M ADS service installation is complete."
-    echo
-    echo -e "➡️ Since you have provided information that you have Caddy Web Server installed, the system will not automatically install Caddy. If you want to configure domain for Wireguard and Pi-hole, you need to configure it manually in your Caddy Web Server!"
-    echo
-    echo -e "👉 Proceed to point domain ${WIREGUARD_URL} and ${PIHOLE_URL} to IP ${SERVER_IP}"
-    echo
-    echo -e "👉 Configure Caddy Web Server sites with the following information"
-    echo
-    echo -e "➡️ First, you need to allow Caddy Web Server container ${CADDY_CONTAINER_NAME} connect to ${DMAD_NETWORK}"
-    echo -e "and, you need to configure reverse proxy for the wireguard and Pi-hole on the Caddy Web Server"
-    echo -e "➡️ wireguard.${DMAD_DOMAIN} -> reverse_proxy to wg-easy:51821"
-    echo -e "➡️ pihole.${DMAD_DOMAIN} -> reverse_proxy to pihole:80"
-    echo
-    echo "----------------------------------------------------------------"
-  else
-    if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
-      if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
-        echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    if ask_confirm "We noticed you are configuring D.M ADS from local computer or raspberry pi, home-lab environment. Scripts will automatically open ports for wireguard portal. Do you agree?"; then
+      if [ ! -e "${BASE_DIR}/docker-compose-on-local.yml" ]; then
+        echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-on-local.yml exits"
         exit 1
       fi
       create_dmad_network
-      docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
-      wait_for_health "wg-easy" "Wireguard VPN Server"
-      wait_for_health "unbound" "Unbound DNS Resolver"
-      wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
+      docker_compose_command -f "${BASE_DIR}/docker-compose-on-local.yml" up -d
+      wait_dmad_for_health
       wait_for_health "caddy" "Caddy Web Server"
       update_basic_auth # Update basic authentication
     else
@@ -494,6 +565,61 @@ case "$1" in
       fi
       echo "Process cancelled! "
       exit
+    fi
+  else
+    # Start the DMAD Container
+    if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+      if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
+        echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
+        exit 1
+      fi
+      create_dmad_network
+      docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
+      wait_dmad_for_health
+      # Connect Caddy Network
+      if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
+        if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
+          docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
+          echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
+        fi
+      fi
+      echo "----------------------------------------------------------------"
+      echo
+      echo -e "✅ D.M ADS service installation is complete."
+      echo
+      echo -e "➡️ Since you have provided information that you have Caddy Web Server installed, the system will not automatically install Caddy. If you want to configure domain for Wireguard and Pi-hole, you need to configure it manually in your Caddy Web Server!"
+      echo
+      echo -e "👉 Proceed to point domain ${WIREGUARD_URL} and ${PIHOLE_URL} to IP ${SERVER_IP}"
+      echo
+      echo -e "👉 Configure Caddy Web Server sites with the following information"
+      echo
+      echo -e "➡️ First, you need to allow Caddy Web Server container ${CADDY_CONTAINER_NAME} connect to ${DMAD_NETWORK}"
+      echo -e "and, you need to configure reverse proxy for the wireguard and Pi-hole on the Caddy Web Server"
+      echo -e "➡️ wireguard.${DMAD_DOMAIN} -> reverse_proxy to wg-easy:51821"
+      echo -e "➡️ pihole.${DMAD_DOMAIN} -> reverse_proxy to pihole:80"
+      echo
+      echo "----------------------------------------------------------------"
+    else
+      if ask_confirm "Do you confirm that you have pointed DNS to the above domains and want to install D.M ADS?"; then
+        if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
+          echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+          exit 1
+        fi
+        create_dmad_network
+        docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
+        wait_dmad_for_health
+        wait_for_health "caddy" "Caddy Web Server"
+        update_basic_auth # Update basic authentication
+      else
+        if [ -f "${BASE_DIR}/.env" ]; then
+          rm -f "${BASE_DIR}/.env"
+        fi
+        if [ -f "${BASE_DIR}/Caddyfile" ]; then
+          rm -f "${BASE_DIR}/Caddyfile"
+        fi
+        echo "Process cancelled! "
+        exit
+      fi
     fi
   fi
   ;;
@@ -535,14 +661,18 @@ case "$1" in
     exit 1
   }
   source .env
-  WITHOUT_CADDY="NO"
-  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
-    WITHOUT_CADDY="YES"
-  fi
-  if [ "$WITHOUT_CADDY" = "YES" ]; then
-    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    docker_compose_command -f "${BASE_DIR}/docker-compose-on-local.yml" down
   else
-    docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+    if [ "$WITHOUT_CADDY" = "YES" ]; then
+      docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
+    else
+      docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
+    fi
   fi
   exit
   ;;
@@ -557,45 +687,24 @@ case "$1" in
   }
 
   source .env
-
-  WITHOUT_CADDY="NO"
-  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
-    WITHOUT_CADDY="YES"
-  fi
-
-  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
-  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
-    echo "Failed to update Caddyfile"
-    exit 1
-  fi
-  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-    if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
-      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
-      exit 1
-    fi
-    create_dmad_network
-    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
-    wait_for_health "wg-easy" "Wireguard VPN Server"
-    wait_for_health "unbound" "Unbound DNS Resolver"
-    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
-    # Connect Caddy Network
-    if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
-      if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
-        docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
-        echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
-      fi
-    fi
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    dmad_up_start_on_local
   else
-    if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
-      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+
+    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+      echo "Failed to update Caddyfile"
       exit 1
     fi
-    create_dmad_network
-    docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
-    wait_for_health "wg-easy" "Wireguard VPN Server"
-    wait_for_health "unbound" "Unbound DNS Resolver"
-    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
-    wait_for_health "caddy" "Caddy Web Server"
+    if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+      dmad_up_start_without_caddy
+    else
+      dmad_up_start_with_caddy
+    fi
   fi
   exit
   ;;
@@ -609,32 +718,20 @@ case "$1" in
     exit 1
   }
   source .env
-
-  WITHOUT_CADDY="NO"
-  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
-    WITHOUT_CADDY="YES"
-  fi
-
-  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
-  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
-    echo "Failed to update Caddyfile"
-    exit 1
-  fi
-  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-    echo -e "Error configuring docker Caddy"
-    echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"
-    echo "CADDY_CONTAINER_NAME: ${CADDY_CONTAINER_NAME}"
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    dmad_up_start_on_local
   else
-    if [ ! -e "${BASE_DIR}/docker-compose-with-caddy.yml" ]; then
-      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-with-caddy.yml exits"
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+
+    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+      echo "Failed to update Caddyfile"
       exit 1
     fi
-    create_dmad_network
-    docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" up -d
-    wait_for_health "wg-easy" "Wireguard VPN Server"
-    wait_for_health "unbound" "Unbound DNS Resolver"
-    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
-    wait_for_health "caddy" "Caddy Web Server"
+    dmad_up_start_with_caddy
   fi
   exit
   ;;
@@ -648,39 +745,21 @@ case "$1" in
     exit 1
   }
   source .env
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    dmad_up_on_local
+  else
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
 
-  WITHOUT_CADDY="NO"
-  if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
-    WITHOUT_CADDY="YES"
-  fi
-
-  # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
-  if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
-    echo "Failed to update Caddyfile"
-    exit 1
-  fi
-
-  if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-    if [ ! -e "${BASE_DIR}/docker-compose-without-caddy.yml" ]; then
-      echo -e "ERROR: Docker compose file it not exits. Please make sure file ${BASE_DIR}/docker-compose-without-caddy.yml exits"
+    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+      echo "Failed to update Caddyfile"
       exit 1
     fi
-    create_dmad_network
-    docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" up -d
-    wait_for_health "wg-easy" "Wireguard VPN Server"
-    wait_for_health "unbound" "Unbound DNS Resolver"
-    wait_for_health "pihole" "Pi-hole Network-wide Ad Blocking"
-    # Connect Caddy Network
-    if [ -n "$CADDY_CONTAINER_NAME" ] && [ "$EXISTS_CADDY_CONTAINER" = "YES" ]; then
-      if ! docker network inspect "${DMAD_NETWORK}" | grep -q "\"Name\": \"${CADDY_CONTAINER_NAME}\""; then
-        docker network connect "${DMAD_NETWORK}" "${CADDY_CONTAINER_NAME}"
-        echo -e "➡️ Caddy Web Server container Joining to Caddy Network ${DMAD_NETWORK} success"
-      fi
-    fi
-  else
-    echo -e "Error configuring docker Caddy"
-    echo "WITHOUT_CADDY: ${WITHOUT_CADDY}"
-    echo "CADDY_CONTAINER_NAME: ${CADDY_CONTAINER_NAME}"
+
+    dmad_up_start_without_caddy
   fi
   exit
   ;;

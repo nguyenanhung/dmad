@@ -57,6 +57,7 @@ services:
             - .:/etc/wireguard
         ports:
             - "51820:51820/udp"
+            - "51821:51821/tcp"
         cap_add:
             - NET_ADMIN
             - SYS_MODULE
@@ -72,3 +73,36 @@ services:
         depends_on:
             - pihole
             - unbound
+
+    caddy:
+        image: "caddy:latest"
+        container_name: caddy
+        restart: unless-stopped
+        ports:
+            - "80:80"
+            - "443:443"
+            - "443:443/udp"
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile
+            - ./sites:/etc/caddy/sites
+            - caddy_data:/data
+            - caddy_config:/config
+        networks:
+            dmad_private_network:
+                ipv4_address: 10.2.0.4
+        healthcheck:
+            test: [ "CMD", "pgrep", "caddy" ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        logging:
+            options:
+                max-size: "10m"
+                max-file: "7"
+        depends_on:
+            - wg-easy
+            - pihole
+
+volumes:
+    caddy_data:
+    caddy_config:

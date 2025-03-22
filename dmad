@@ -16,6 +16,10 @@ DMAD_PRIVATE_NETWORK_SUBNET="10.2.0.0/24"
 has_command() {
   command -v "$1" >/dev/null 2>&1
 }
+trim() {
+  local input="$1"
+  echo "$input" | sed 's/^[ \t]*//;s/[ \t]*$//'
+}
 ask_info() {
   local prompt_message=$1 # Prompt message
   local default_value=$2  # Default value for the default option
@@ -244,6 +248,11 @@ create_dmad_network() {
     echo "👌 Network ${DM_ADS_NETWORK_NAME} already exists"
   fi
 }
+pull_wg_easy_latest() {
+  if ! docker image inspect ghcr.io/wg-easy/wg-easy >/dev/null 2>&1; then
+    docker pull ghcr.io/wg-easy/wg-easy
+  fi
+}
 install_credentials() {
   local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD WG_PASSWORD_HASH PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
@@ -283,8 +292,9 @@ install_credentials() {
   PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "${CURRENT_TIMEZONE}")
   PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
   WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
-  WG_PASSWORD_HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'${WG_PASSWORD}', bcrypt.gensalt()).decode())")
 
+  WG_PASSWORD_HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'${WG_PASSWORD}', bcrypt.gensalt(12)).decode())")
+  WG_PASSWORD_HASH=$(trim "$WG_PASSWORD_HASH")
 
   local EXISTS_CADDY_CONTAINER="NO"
   local CADDY_CONTAINER_NAME="caddy"
@@ -321,8 +331,7 @@ CADDY_CONTAINER_NETWORK_NAME=${CADDY_CONTAINER_NETWORK_NAME}
 # wg-easy
 WIREGUARD_URL=${WIREGUARD_URL}
 WG_HOST=${WG_HOST}
-PASSWORD=${WG_PASSWORD}
-PASSWORD_HASH=${WG_PASSWORD_HASH}
+PASSWORD_HASH='${WG_PASSWORD_HASH}' # PASSWORD=${WG_PASSWORD}
 WG_PORT=${WG_PORT}
 WG_DEFAULT_ADDRESS=${WG_DEFAULT_ADDRESS}
 WG_DEFAULT_DNS=${WG_DEFAULT_DNS}
@@ -526,6 +535,7 @@ case "$1" in
 --install | -install | install | i)
   install_packages
   install_credentials
+
   if [ ! -f "${BASE_DIR}/.env" ]; then
     echo "Failed to update credentials"
     exit 1

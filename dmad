@@ -245,7 +245,7 @@ create_dmad_network() {
   fi
 }
 install_credentials() {
-  local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
+  local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD WG_PASSWORD_HASH PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
   WIREGUARD_URL="http://0.0.0.0:51821"
   PIHOLE_URL="http://10.2.0.100/admin"
@@ -281,8 +281,10 @@ install_credentials() {
     CURRENT_TIMEZONE="Asia/Singapore"
   fi
   PIHOLE_TZ=$(ask_info "Enter PIHOLE_TZ" "${CURRENT_TIMEZONE}")
-  WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
   PIHOLE_WEBPASSWORD=$(ask_info "Enter PIHOLE_WEBPASSWORD" "$(generate_password)")
+  WG_PASSWORD=$(ask_info "Enter WG_PASSWORD" "$(generate_password)")
+  WG_PASSWORD_HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'${WG_PASSWORD}', bcrypt.gensalt()).decode())")
+
 
   local EXISTS_CADDY_CONTAINER="NO"
   local CADDY_CONTAINER_NAME="caddy"
@@ -320,6 +322,7 @@ CADDY_CONTAINER_NETWORK_NAME=${CADDY_CONTAINER_NETWORK_NAME}
 WIREGUARD_URL=${WIREGUARD_URL}
 WG_HOST=${WG_HOST}
 PASSWORD=${WG_PASSWORD}
+PASSWORD_HASH=${WG_PASSWORD_HASH}
 WG_PORT=${WG_PORT}
 WG_DEFAULT_ADDRESS=${WG_DEFAULT_ADDRESS}
 WG_DEFAULT_DNS=${WG_DEFAULT_DNS}

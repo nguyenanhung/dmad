@@ -39,3 +39,4 @@ _dmad_completion() {
 
 # Register the completion function for the './dmad' command
 complete -F _dmad_completion ./dmad
+complete -F _dmad_completion ./dmad/dmad

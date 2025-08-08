@@ -27,6 +27,7 @@ _dmad_completion() {
     "update-pihole"                # Update latest pihole image
     "update-wg-easy"               # Update latest wg-easy image
     "update-unbound"               # Update latest unbound image
+    "update-stack"                 # Update latest dmad docker stack image
     "join-caddy-network"           # Join Caddy network command
     "enable-domain-external-caddy" # Enable domain external Caddy command
   )

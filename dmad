@@ -1001,6 +1001,59 @@ case "$1" in
   fi
   exit 1
   ;;
+--stack-update | -stack-update | stack-update | --update-stack | -update-stack | update-stack)
+  if ask_confirm "‼️ Are you sure you want to update to the latest version of dmad VPN server? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
+    echo "-----------------------------------------------"
+    echo "👉 Stop dmad VPN Server..."
+    echo "-----------------------------------------------"
+    if ! dmad_go_down; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Update latest pihole image..."
+    echo "-----------------------------------------------"
+    if ! pull_pihole_latest; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Update latest wg-easy image..."
+    echo "-----------------------------------------------"
+    if ! pull_wg_easy_latest; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Update latest unbound image..."
+    echo "-----------------------------------------------"
+    if ! pull_unbound_latest; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Starting dmad VPN Server..."
+    echo "-----------------------------------------------"
+    if ! dmad_go_up; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+    echo
+    echo "-----------------------------------------------"
+    echo "✅ Finished up-to-date unbound"
+    echo "-----------------------------------------------"
+    exit
+  fi
+  exit 1
+  ;;
 *)
   echo "$1 in validate"
   exit 1

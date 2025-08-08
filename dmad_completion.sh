@@ -21,6 +21,8 @@ _dmad_completion() {
     "setup-completion"             # Setup completion command
     "pihole-subscribe-list"        # Update pihole subscribe list command
     "pihole-setpassword"           # Update pihole password command
+    "pihole-pull"                  # Pull latest pihole image
+    "pihole-update"                  # Update latest pihole image
     "join-caddy-network"           # Join Caddy network command
     "enable-domain-external-caddy" # Enable domain external Caddy command
   )

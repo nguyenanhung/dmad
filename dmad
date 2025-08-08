@@ -253,6 +253,21 @@ pull_wg_easy_latest() {
     docker pull ghcr.io/wg-easy/wg-easy
   fi
 }
+pull_pihole_latest() {
+  if ! docker image inspect pihole/pihole:latest >/dev/null 2>&1; then
+    docker pull pihole/pihole:latest
+  fi
+}
+pull_unbound_latest() {
+  if ! docker image inspect klutchell/unbound >/dev/null 2>&1; then
+    docker pull klutchell/unbound
+  fi
+}
+pull_caddy_latest() {
+  if ! docker image inspect caddy:latest >/dev/null 2>&1; then
+    docker pull caddy:latest
+  fi
+}
 install_credentials() {
   local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD WG_PASSWORD_HASH PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
   SERVER_IP=$(curl -sSL https://checkip.amazonaws.com)
@@ -531,6 +546,69 @@ dmad_up_start_with_caddy() {
   fi
 }
 
+dmad_go_down() {
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to check credentials"
+    return 1
+  fi
+
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    return 1
+  }
+
+  source .env
+
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    docker_compose_command -f "${BASE_DIR}/docker-compose-on-local.yml" down
+  else
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+
+    if [ "$WITHOUT_CADDY" = "YES" ]; then
+      docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
+    else
+      docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
+    fi
+  fi
+  return 0
+}
+dmad_go_up() {
+  if [ ! -f "${BASE_DIR}/.env" ]; then
+    echo "Failed to check credentials"
+    return 1
+  fi
+  cd "$BASE_DIR" || {
+    echo "Failed to change directory"
+    return 1
+  }
+
+  source .env
+
+  if [[ "$ON_LOCAL" == "YES" ]]; then
+    dmad_up_start_on_local
+  else
+    WITHOUT_CADDY="NO"
+    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
+      WITHOUT_CADDY="YES"
+    fi
+
+    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
+    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
+      echo "Failed to update Caddyfile"
+      exit 1
+    fi
+    if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
+      dmad_up_start_without_caddy
+    else
+      dmad_up_start_with_caddy
+    fi
+  fi
+  return 0
+}
+
 case "$1" in
 --install | -install | install | i)
   install_packages
@@ -665,61 +743,22 @@ case "$1" in
   exit
   ;;
 --down | -down | down)
-  if [ ! -f "${BASE_DIR}/.env" ]; then
-    echo "Failed to update credentials"
-    exit 1
-  fi
-  cd "$BASE_DIR" || {
-    echo "Failed to change directory"
-    exit 1
-  }
-  source .env
-  if [[ "$ON_LOCAL" == "YES" ]]; then
-    docker_compose_command -f "${BASE_DIR}/docker-compose-on-local.yml" down
+  if dmad_go_down; then
+    echo "Successes"
+    exit
   else
-    WITHOUT_CADDY="NO"
-    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
-      WITHOUT_CADDY="YES"
-    fi
-    if [ "$WITHOUT_CADDY" = "YES" ]; then
-      docker_compose_command -f "${BASE_DIR}/docker-compose-without-caddy.yml" down
-    else
-      docker_compose_command -f "${BASE_DIR}/docker-compose-with-caddy.yml" down
-    fi
+    echo "Failed"
+    exit 1
   fi
-  exit
   ;;
 --up | -up | up)
-  if [ ! -f "${BASE_DIR}/.env" ]; then
-    echo "Failed to update credentials"
-    exit 1
-  fi
-  cd "$BASE_DIR" || {
-    echo "Failed to change directory"
-    exit 1
-  }
-
-  source .env
-  if [[ "$ON_LOCAL" == "YES" ]]; then
-    dmad_up_start_on_local
+  if dmad_go_up; then
+    echo "Successes"
+    exit
   else
-    WITHOUT_CADDY="NO"
-    if [ -n "$EXISTS_CADDY_CONTAINER" ] && [ -n "$CADDY_CONTAINER_NAME" ] && [[ "$EXISTS_CADDY_CONTAINER" == "YES" ]]; then
-      WITHOUT_CADDY="YES"
-    fi
-
-    # If an external Caddy Web Server already exists, there is no need to check the Caddy Web Server configuration!
-    if [ "$WITHOUT_CADDY" = "NO" ] && [ ! -f "${BASE_DIR}/Caddyfile" ]; then
-      echo "Failed to update Caddyfile"
-      exit 1
-    fi
-    if [[ "$WITHOUT_CADDY" == "YES" ]] && [ -n "$CADDY_CONTAINER_NAME" ]; then
-      dmad_up_start_without_caddy
-    else
-      dmad_up_start_with_caddy
-    fi
+    echo "Failed"
+    exit 1
   fi
-  exit
   ;;
 --up-with-caddy | -up-with-caddy | up-with-caddy)
   if [ ! -f "${BASE_DIR}/.env" ]; then
@@ -861,6 +900,12 @@ case "$1" in
   ;;
 --pihole-setpassword | -pihole-setpassword | pihole-setpassword)
   docker exec -it pihole sudo pihole setpassword
+  ;;
+--pihole-pull | -pihole-pull | pihole-pull)
+  pull_pihole_latest
+  ;;
+--pihole-update | -pihole-update | pihole-update)
+  dmad_go_down && pull_pihole_latest && dmad_go_up
   ;;
 *)
   echo "$1 in validate"

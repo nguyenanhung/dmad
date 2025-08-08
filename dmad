@@ -897,28 +897,36 @@ case "$1" in
   pull_pihole_latest
   ;;
 --pihole-update | -pihole-update | pihole-update | --update-pihole | -update-pihole | update-pihole)
-  if ask_confirm "Are you sure you want to update to the latest version of pihole? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
-    echo "Stop dmad VPN Server..."
+  if ask_confirm "‼️ Are you sure you want to update to the latest version of pihole? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
+    echo "-----------------------------------------------"
+    echo "👉 Stop dmad VPN Server..."
+    echo "-----------------------------------------------"
     if ! dmad_go_down; then
-      echo "Failed to Update, Please manually check log"
+      echo "❌ Failed to Update, Please manually check log"
       exit 1
     fi
 
     echo
-    echo "Update latest pihole image..."
+    echo "-----------------------------------------------"
+    echo "👉 Update latest pihole image..."
+    echo "-----------------------------------------------"
     if ! pull_pihole_latest; then
-      echo "Failed to Update, Please manually check log"
+      echo "❌ Failed to Update, Please manually check log"
       exit 1
     fi
 
     echo
-    echo "Starting dmad VPN Server..."
+    echo "-----------------------------------------------"
+    echo "👉 Starting dmad VPN Server..."
+    echo "-----------------------------------------------"
     if ! dmad_go_up; then
-      echo "Failed to Update, Please manually check log"
+      echo "❌ Failed to Update, Please manually check log"
       exit 1
     fi
     echo
-    echo "Finished up-to-date pihole"
+    echo "-----------------------------------------------"
+    echo "✅ Finished up-to-date pihole"
+    echo "-----------------------------------------------"
   fi
   ;;
 *)

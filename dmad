@@ -896,7 +896,7 @@ case "$1" in
 --pihole-pull | -pihole-pull | pihole-pull)
   pull_pihole_latest
   ;;
---pihole-update | -pihole-update | pihole-update)
+--pihole-update | -pihole-update | pihole-update | --update-pihole | -update-pihole | update-pihole)
   if ask_confirm "Are you sure you want to update to the latest version of pihole? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
     echo "Stop dmad VPN Server..."
     if ! dmad_go_down; then

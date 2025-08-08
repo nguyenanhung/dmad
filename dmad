@@ -249,7 +249,7 @@ create_dmad_network() {
   fi
 }
 pull_wg_easy_latest() {
-  docker pull ghcr.io/wg-easy/wg-easy
+  docker pull ghcr.io/wg-easy/wg-easy:14
 }
 pull_pihole_latest() {
   docker pull pihole/pihole:latest
@@ -927,7 +927,79 @@ case "$1" in
     echo "-----------------------------------------------"
     echo "✅ Finished up-to-date pihole"
     echo "-----------------------------------------------"
+    exit
   fi
+  exit 1
+  ;;
+--wg-easy-update | -wg-easy-update | wg-easy-update | --wg-easy-pihole | -wg-easy-pihole | wg-easy-pihole)
+  if ask_confirm "‼️ Are you sure you want to update to the latest version of wg-easy? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
+    echo "-----------------------------------------------"
+    echo "👉 Stop dmad VPN Server..."
+    echo "-----------------------------------------------"
+    if ! dmad_go_down; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Update latest wg-easy image..."
+    echo "-----------------------------------------------"
+    if ! pull_wg_easy_latest; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Starting dmad VPN Server..."
+    echo "-----------------------------------------------"
+    if ! dmad_go_up; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+    echo
+    echo "-----------------------------------------------"
+    echo "✅ Finished up-to-date wg-easy"
+    echo "-----------------------------------------------"
+    exit
+  fi
+  exit 1
+  ;;
+--unbound-update | -unbound-update | unbound-update | --unbound-pihole | -unbound-pihole | unbound-pihole)
+  if ask_confirm "‼️ Are you sure you want to update to the latest version of unbound? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
+    echo "-----------------------------------------------"
+    echo "👉 Stop dmad VPN Server..."
+    echo "-----------------------------------------------"
+    if ! dmad_go_down; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Update latest unbound image..."
+    echo "-----------------------------------------------"
+    if ! pull_unbound_latest; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "-----------------------------------------------"
+    echo "👉 Starting dmad VPN Server..."
+    echo "-----------------------------------------------"
+    if ! dmad_go_up; then
+      echo "❌ Failed to Update, Please manually check log"
+      exit 1
+    fi
+    echo
+    echo "-----------------------------------------------"
+    echo "✅ Finished up-to-date unbound"
+    echo "-----------------------------------------------"
+    exit
+  fi
+  exit 1
   ;;
 *)
   echo "$1 in validate"

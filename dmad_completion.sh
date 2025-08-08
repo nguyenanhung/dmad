@@ -22,7 +22,11 @@ _dmad_completion() {
     "pihole-subscribe-list"        # Update pihole subscribe list command
     "pihole-setpassword"           # Update pihole password command
     "pihole-pull"                  # Pull latest pihole image
-    "pihole-update"                  # Update latest pihole image
+    "pihole-update"                # Update latest pihole image
+    "update-pihole"                # Update latest pihole image
+    "update-pihole"                # Update latest pihole image
+    "update-wg-easy"               # Update latest wg-easy image
+    "update-unbound"               # Update latest unbound image
     "join-caddy-network"           # Join Caddy network command
     "enable-domain-external-caddy" # Enable domain external Caddy command
   )

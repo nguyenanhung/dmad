@@ -931,7 +931,7 @@ case "$1" in
   fi
   exit 1
   ;;
---wg-easy-update | -wg-easy-update | wg-easy-update | --wg-easy-pihole | -wg-easy-pihole | wg-easy-pihole)
+--wg-easy-update | -wg-easy-update | wg-easy-update | --update-wg-easy | -update-wg-easy | update-wg-easy)
   if ask_confirm "‼️ Are you sure you want to update to the latest version of wg-easy? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
     echo "-----------------------------------------------"
     echo "👉 Stop dmad VPN Server..."
@@ -966,7 +966,7 @@ case "$1" in
   fi
   exit 1
   ;;
---unbound-update | -unbound-update | unbound-update | --unbound-pihole | -unbound-pihole | unbound-pihole)
+--unbound-update | -unbound-update | unbound-update | --update-unbound | -update-unbound | update-unbound)
   if ask_confirm "‼️ Are you sure you want to update to the latest version of unbound? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
     echo "-----------------------------------------------"
     echo "👉 Stop dmad VPN Server..."

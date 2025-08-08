@@ -249,24 +249,16 @@ create_dmad_network() {
   fi
 }
 pull_wg_easy_latest() {
-  if ! docker image inspect ghcr.io/wg-easy/wg-easy >/dev/null 2>&1; then
-    docker pull ghcr.io/wg-easy/wg-easy
-  fi
+  docker pull ghcr.io/wg-easy/wg-easy
 }
 pull_pihole_latest() {
-  if ! docker image inspect pihole/pihole:latest >/dev/null 2>&1; then
-    docker pull pihole/pihole:latest
-  fi
+  docker pull pihole/pihole:latest
 }
 pull_unbound_latest() {
-  if ! docker image inspect klutchell/unbound >/dev/null 2>&1; then
-    docker pull klutchell/unbound
-  fi
+  docker pull klutchell/unbound
 }
 pull_caddy_latest() {
-  if ! docker image inspect caddy:latest >/dev/null 2>&1; then
-    docker pull caddy:latest
-  fi
+  docker pull caddy:latest
 }
 install_credentials() {
   local ON_LOCAL SERVER_IP DMAD_DOMAIN WG_HOST WIREGUARD_URL WG_PASSWORD WG_PASSWORD_HASH PIHOLE_URL PIHOLE_TZ PIHOLE_WEBPASSWORD
@@ -905,7 +897,29 @@ case "$1" in
   pull_pihole_latest
   ;;
 --pihole-update | -pihole-update | pihole-update)
-  dmad_go_down && pull_pihole_latest && dmad_go_up
+  if ask_confirm "Are you sure you want to update to the latest version of pihole? This will require a restart of your dmad VPN server, all clients will be temporarily unavailable for VPN. Be sure before deciding to update!"; then
+    echo "Stop dmad VPN Server..."
+    if ! dmad_go_down; then
+      echo "Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "Update latest pihole image..."
+    if ! pull_pihole_latest; then
+      echo "Failed to Update, Please manually check log"
+      exit 1
+    fi
+
+    echo
+    echo "Starting dmad VPN Server..."
+    if ! dmad_go_up; then
+      echo "Failed to Update, Please manually check log"
+      exit 1
+    fi
+    echo
+    echo "Finished up-to-date pihole"
+  fi
   ;;
 *)
   echo "$1 in validate"
